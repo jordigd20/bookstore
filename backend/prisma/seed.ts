@@ -4,23 +4,35 @@ import { categories, books, users } from './mock-data';
 const prisma = new PrismaClient();
 
 async function main() {
-  await prisma.wishlistBook.deleteMany();
-  await prisma.wishlist.deleteMany();
-  await prisma.address.deleteMany();
-  await prisma.cartBook.deleteMany();
-  await prisma.cart.deleteMany();
-  await prisma.orderBook.deleteMany();
-  await prisma.order.deleteMany();
-  await prisma.book.deleteMany();
-  await prisma.user.deleteMany();
-  await prisma.category.deleteMany();
+  // await prisma.wishlistBook.deleteMany();
+  // await prisma.wishlist.deleteMany();
+  // await prisma.address.deleteMany();
+  // await prisma.cartBook.deleteMany();
+  // await prisma.cart.deleteMany();
+  // await prisma.orderBook.deleteMany();
+  // await prisma.order.deleteMany();
+  // await prisma.book.deleteMany();
+  // await prisma.user.deleteMany();
+  // await prisma.category.deleteMany();
 
   await prisma.category.createMany({
     data: categories,
     skipDuplicates: true
   });
 
-  const allBooks = books.map((book) => {
+  const booksFound = await prisma.book.findMany({
+    where: {
+      ISBN: {
+        in: books.map((book) => book.ISBN)
+      }
+    }
+  });
+
+  const booksToCreate = books.filter((book) => {
+    return !booksFound.some((bookFound) => bookFound.ISBN === book.ISBN);
+  });
+
+  const allBooks = booksToCreate.map((book) => {
     return prisma.book.create({
       data: book,
       include: {
@@ -30,17 +42,35 @@ async function main() {
   });
   const booksCreated = await Promise.all(allBooks);
 
-  const allUsers = users.map(
+  const usersFound = await prisma.user.findMany({
+    where: {
+      email: {
+        in: users.map((user) => user.email)
+      }
+    }
+  });
+
+  const usersToCreate = users.filter((user) => {
+    return !usersFound.some((userFound) => userFound.email === user.email);
+  });
+
+  const allUsers = usersToCreate.map(
     ({ email, firstName, lastName, password, role, wishlist, addresses, cart, orders }) => {
+      const bookId1 = booksCreated[0]?.id ?? booksFound[0]?.id;
+      const bookId2 = booksCreated[1]?.id ?? booksFound[1]?.id;
+
+      console.log({ booksCreated1: booksCreated[0]?.id, booksCreated2: booksCreated[1]?.id });
+      console.log({ booksFound1: booksFound[0]?.id, booksFound2: booksFound[1]?.id });
+
       if (wishlist.create.hasOwnProperty('books')) {
         wishlist.create.books = {
           createMany: {
             data: [
               {
-                bookId: booksCreated[0].id
+                bookId: bookId1
               },
               {
-                bookId: booksCreated[1].id
+                bookId: bookId2
               }
             ]
           }
@@ -52,10 +82,10 @@ async function main() {
           createMany: {
             data: [
               {
-                bookId: booksCreated[0].id
+                bookId: bookId1
               },
               {
-                bookId: booksCreated[1].id
+                bookId: bookId2
               }
             ]
           }
@@ -67,14 +97,14 @@ async function main() {
           createMany: {
             data: [
               {
-                bookId: booksCreated[0].id,
+                bookId: bookId1,
                 quantity: 1,
-                price: booksCreated[0].currentPrice
+                price: booksCreated[0]?.currentPrice ?? booksFound[0]?.currentPrice
               },
               {
-                bookId: booksCreated[1].id,
+                bookId: bookId2,
                 quantity: 1,
-                price: booksCreated[1].currentPrice
+                price: booksCreated[1]?.currentPrice ?? booksFound[1]?.currentPrice
               }
             ]
           }

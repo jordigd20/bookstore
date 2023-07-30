@@ -1,3 +1,5 @@
+import * as bcrypt from 'bcrypt';
+
 type Role = 'ADMIN' | 'USER';
 
 export const categories = [
@@ -270,7 +272,7 @@ export const users = [
     email: 'johndoe@email.com',
     firstName: 'John',
     lastName: 'Doe',
-    password: '123456',
+    password: bcrypt.hashSync('Test1234', 10),
     role: 'USER' as Role,
     wishlist: {
       create: {
@@ -318,7 +320,7 @@ export const users = [
     email: 'jordi@email.com',
     firstName: 'Jordi',
     lastName: 'Doe',
-    password: '123456',
+    password: bcrypt.hashSync('Test1234', 10),
     role: 'ADMIN' as Role,
     wishlist: {
       create: {}
@@ -358,7 +360,7 @@ export const users = [
     email: 'raul@email.com',
     firstName: 'Raul',
     lastName: 'Fernandez',
-    password: '123456',
+    password: bcrypt.hashSync('Test1234', 10),
     role: 'USER' as Role,
     wishlist: {
       create: {
