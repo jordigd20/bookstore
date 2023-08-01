@@ -37,6 +37,7 @@ export class UserEntity implements User {
 
   @ApiProperty({
     description: 'The role of the user',
+    enum: ['USER', 'ADMIN'],
     example: 'USER'
   })
   role: Role;

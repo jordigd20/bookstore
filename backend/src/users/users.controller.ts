@@ -17,16 +17,16 @@ export class UsersController {
     return this.usersService.findAll(paginationDto);
   }
 
-  @Get(':id')
+  @Get(':term')
   @ApiOkResponse({ type: UserEntity })
   @ApiResponse({ status: 400, description: 'Bad request' })
   @ApiResponse({ status: 404, description: 'User not found' })
   findOne(
-    @Param('id', ParseIntPipe) id: number,
+    @Param('term') term: string,
     @Query()
     findOneDto: FindOneUserDto
   ) {
-    return this.usersService.findOne(id, findOneDto);
+    return this.usersService.findOne(term, findOneDto);
   }
 
   @Patch(':id')

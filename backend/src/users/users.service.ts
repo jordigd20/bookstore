@@ -32,11 +32,18 @@ export class UsersService {
     });
   }
 
-  async findOne(id: number, findOneDto: FindOneUserDto) {
+  async findOne(term: string, findOneDto: FindOneUserDto) {
     const { includeAddress = false } = findOneDto;
+    const where = {} as { id: number } | { email: string };
+
+    if (!isNaN(+term)) {
+      where['id'] = +term;
+    } else {
+      where['email'] = term;
+    }
 
     const user = await this.prisma.user.findUnique({
-      where: { id },
+      where,
       select: {
         id: true,
         email: true,
@@ -49,7 +56,7 @@ export class UsersService {
     });
 
     if (!user) {
-      throw new NotFoundException(`User with id or email: ${id} not found`);
+      throw new NotFoundException(`User with id or email: ${term} not found`);
     }
 
     return user;
@@ -67,26 +74,28 @@ export class UsersService {
       throw new NotFoundException(`User with id: ${id} not found`);
     }
 
-    const isPasswordValid = bcrypt.compareSync(updateUserDto.password, user.password);
-
-    if (isPasswordValid) {
-      try {
-        const { password, ...data } = updateUserDto;
-
-        const updatedUser = await this.prisma.user.update({
-          where: { id },
-          data: { ...data }
-        });
-
-        const { password: _, ...userData } = updatedUser;
-
-        return userData;
-      } catch (error) {
-        this.handleDBError(error);
-      }
+    if (!bcrypt.compareSync(updateUserDto.password, user.password)) {
+      throw new BadRequestException('Invalid password');
     }
 
-    throw new BadRequestException('Invalid password');
+    try {
+      const { password, email, firstName, lastName } = updateUserDto;
+
+      const updatedUser = await this.prisma.user.update({
+        where: { id },
+        data: {
+          email: email.toLowerCase().trim(),
+          firstName: firstName.trim(),
+          lastName: lastName.trim()
+        }
+      });
+
+      const { password: _, ...userData } = updatedUser;
+
+      return userData;
+    } catch (error) {
+      this.handleDBError(error);
+    }
   }
 
   handleDBError(error: any) {
