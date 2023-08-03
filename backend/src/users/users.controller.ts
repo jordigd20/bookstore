@@ -5,8 +5,10 @@ import { PaginationDto } from '../common/dto/pagination.dto';
 import { FindOneUserDto } from './dto/find-one-user.dto';
 import { ApiOkResponse, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { UserEntity } from './entities/user.entity';
+import { Auth } from '../auth/decorators/auth.decorator';
 
 @ApiTags('users')
+@Auth()
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
