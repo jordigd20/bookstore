@@ -7,7 +7,7 @@ import {
 import { UpdateUserDto } from './dto/update-user.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
-import { Prisma } from '@prisma/client';
+import { Prisma, PrismaPromise, Role } from '@prisma/client';
 import { PaginationDto } from '../common/dto/pagination.dto';
 import { FindOneUserDto } from './dto/find-one-user.dto';
 
