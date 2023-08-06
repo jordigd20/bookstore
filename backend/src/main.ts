@@ -19,6 +19,7 @@ async function bootstrap() {
     .setDescription('API Rest for an ecommerce about books')
     .setVersion('0.1')
     .addTag('bookstore')
+    .addBearerAuth()
     .build();
 
   const document = SwaggerModule.createDocument(app, config);

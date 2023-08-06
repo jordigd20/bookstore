@@ -43,12 +43,14 @@ export class UserEntity implements User {
   role: Role;
 
   @ApiProperty({
-    writeOnly: true
+    description: 'The created date of the record',
+    example: new Date(),
   })
   createdAt: Date;
 
   @ApiProperty({
-    writeOnly: true
+    description: 'The updated date of the record',
+    example: new Date(),
   })
   updatedAt: Date;
 }

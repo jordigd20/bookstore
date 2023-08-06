@@ -3,7 +3,7 @@ import { UsersService } from './users.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { PaginationDto } from '../common/dto/pagination.dto';
 import { FindOneUserDto } from './dto/find-one-user.dto';
-import { ApiOkResponse, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOkResponse, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { UserEntity } from './entities/user.entity';
 import { Auth } from '../auth/decorators/auth.decorator';
 
@@ -13,16 +13,18 @@ import { Auth } from '../auth/decorators/auth.decorator';
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  @Get()
   @ApiOkResponse({ type: UserEntity, isArray: true })
+  @ApiBearerAuth()
+  @Get()
   findAll(@Query() paginationDto: PaginationDto) {
     return this.usersService.findAll(paginationDto);
   }
 
-  @Get(':term')
   @ApiOkResponse({ type: UserEntity })
   @ApiResponse({ status: 400, description: 'Bad request' })
   @ApiResponse({ status: 404, description: 'User not found' })
+  @ApiBearerAuth()
+  @Get(':term')
   findOne(
     @Param('term') term: string,
     @Query()
@@ -31,10 +33,11 @@ export class UsersController {
     return this.usersService.findOne(term, findOneDto);
   }
 
-  @Patch(':id')
   @ApiOkResponse({ type: UserEntity })
   @ApiResponse({ status: 400, description: 'Bad request' })
   @ApiResponse({ status: 404, description: 'User not found' })
+  @ApiBearerAuth()
+  @Patch(':id')
   update(@Param('id', ParseIntPipe) id: number, @Body() updateUserDto: UpdateUserDto) {
     return this.usersService.update(id, updateUserDto);
   }
