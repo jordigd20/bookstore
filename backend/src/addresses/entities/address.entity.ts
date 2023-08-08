@@ -59,13 +59,13 @@ export class AddressEntity implements Address {
 
   @ApiProperty({
     description: 'The created date of the record',
-    example: new Date(),
+    example: new Date()
   })
   createdAt: Date;
 
   @ApiProperty({
     description: 'The updated date of the record',
-    example: new Date(),
+    example: new Date()
   })
   updatedAt: Date;
 
