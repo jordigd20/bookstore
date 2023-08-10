@@ -27,6 +27,12 @@ export class AddressEntity implements Address {
   phone: string;
 
   @ApiProperty({
+    description: 'The country code following ISO 3166-1 alpha-2',
+    example: 'ES'
+  })
+  countryCode: string;
+
+  @ApiProperty({
     description: 'The country of the user',
     example: 'Spain'
   })

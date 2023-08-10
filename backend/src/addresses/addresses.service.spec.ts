@@ -101,10 +101,8 @@ describe('AddressesService', () => {
     it('should create an address', async () => {
       const userId = 1;
 
-      const { countryCode, ...restOfAddressDto } = addressDto;
-
       expect(await service.create(userId, addressDto)).toEqual({
-        ...restOfAddressDto,
+        ...addressDto,
         id: expect.any(Number),
         createdAt: expect.any(Date),
         updatedAt: expect.any(Date),
@@ -112,7 +110,7 @@ describe('AddressesService', () => {
       });
       expect(mockPrismaService.address.create).toHaveBeenCalledWith({
         data: {
-          ...restOfAddressDto,
+          ...addressDto,
           user: { connect: { id: userId } }
         }
       });
@@ -120,12 +118,11 @@ describe('AddressesService', () => {
 
     it('should throw an error if the user does not exist', async () => {
       const userId = 0;
-      const { countryCode, ...restOfAddressDto } = addressDto;
 
       await expect(service.create(userId, addressDto)).rejects.toThrowError(BadRequestException);
       expect(mockPrismaService.address.create).toHaveBeenCalledWith({
         data: {
-          ...restOfAddressDto,
+          ...addressDto,
           user: { connect: { id: userId } }
         }
       });
@@ -174,10 +171,9 @@ describe('AddressesService', () => {
   describe('update', () => {
     it('should update an address', async () => {
       const id = 1;
-      const { countryCode, ...restOfAddressDto } = addressDto;
 
       expect(await service.update(id, addressDto)).toEqual({
-        ...restOfAddressDto,
+        ...addressDto,
         id: expect.any(Number),
         createdAt: expect.any(Date),
         updatedAt: expect.any(Date),
@@ -186,20 +182,19 @@ describe('AddressesService', () => {
       expect(mockPrismaService.address.update).toHaveBeenCalledWith({
         where: { id },
         data: {
-          ...restOfAddressDto
+          ...addressDto
         }
       });
     });
 
     it('should throw an error if the user does not exist', async () => {
       const id = 0;
-      const { countryCode, ...restOfAddressDto } = addressDto;
 
       await expect(service.update(id, addressDto)).rejects.toThrowError(BadRequestException);
       expect(mockPrismaService.address.update).toHaveBeenCalledWith({
         where: { id },
         data: {
-          ...restOfAddressDto
+          ...addressDto
         }
       });
     });

@@ -11,11 +11,9 @@ export class AddressesService {
 
   async create(userId: number, createAddressDto: CreateAddressDto) {
     try {
-      const { countryCode, ...rest } = createAddressDto;
-
       const address = await this.prisma.address.create({
         data: {
-          ...rest,
+          ...createAddressDto,
           firstName: createAddressDto.firstName.trim(),
           lastName: createAddressDto.lastName.trim(),
           address: createAddressDto.address.trim(),
@@ -45,12 +43,10 @@ export class AddressesService {
 
   async update(id: number, updateAddressDto: UpdateAddressDto) {
     try {
-      const { countryCode, ...rest } = updateAddressDto;
-
       const address = await this.prisma.address.update({
         where: { id },
         data: {
-          ...rest,
+          ...updateAddressDto,
           firstName: updateAddressDto.firstName.trim(),
           lastName: updateAddressDto.lastName.trim(),
           address: updateAddressDto.address.trim()

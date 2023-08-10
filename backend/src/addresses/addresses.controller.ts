@@ -25,13 +25,13 @@ import { AddressEntity } from './entities/address.entity';
 
 @ApiTags('addresses')
 @Auth()
+@ApiBearerAuth()
 @Controller('addresses')
 export class AddressesController {
   constructor(private readonly addressesService: AddressesService) {}
 
   @ApiCreatedResponse({ type: AddressEntity })
   @ApiBadRequestResponse({ description: 'Invalid data provided' })
-  @ApiBearerAuth()
   @Post(':userId')
   create(
     @Param('userId', ParseIntPipe) userId: number,
@@ -41,14 +41,12 @@ export class AddressesController {
   }
 
   @ApiOkResponse({ type: [AddressEntity] })
-  @ApiBearerAuth()
-  @Get('')
+  @Get()
   findAll(@Query() paginationDto: PaginationDto) {
     return this.addressesService.findAll(paginationDto);
   }
 
   @ApiOkResponse({ type: [AddressEntity] })
-  @ApiBearerAuth()
   @Get(':userId')
   findOne(@Param('userId', ParseIntPipe) userId: number) {
     return this.addressesService.findOne(userId);
@@ -56,7 +54,6 @@ export class AddressesController {
 
   @ApiOkResponse({ type: AddressEntity })
   @ApiBadRequestResponse({ description: 'Invalid data provided' })
-  @ApiBearerAuth()
   @Patch(':id')
   update(@Param('id', ParseIntPipe) id: number, @Body() updateAddressDto: UpdateAddressDto) {
     return this.addressesService.update(id, updateAddressDto);
@@ -64,7 +61,6 @@ export class AddressesController {
 
   @ApiOkResponse({ description: 'Address deleted successfully' })
   @ApiBadRequestResponse({ description: 'Invalid data provided' })
-  @ApiBearerAuth()
   @Delete(':id')
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.addressesService.remove(id);
