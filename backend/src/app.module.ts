@@ -4,6 +4,7 @@ import { JoiValidationSchema } from './config/joi.validation';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { AddressesModule } from './addresses/addresses.module';
+import { BooksModule } from './books/books.module';
 
 @Module({
   imports: [
@@ -12,7 +13,8 @@ import { AddressesModule } from './addresses/addresses.module';
     }),
     UsersModule,
     AuthModule,
-    AddressesModule
+    AddressesModule,
+    BooksModule
   ],
   controllers: [],
   providers: []
