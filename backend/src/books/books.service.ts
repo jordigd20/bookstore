@@ -269,7 +269,7 @@ export class BooksService {
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
       if (error.code === 'P2002') {
         throw new BadRequestException(
-          `There is already an account with this ${error.meta.target[0]}`
+          `There is already a book with this ${error.meta.target[0]}`
         );
       }
 

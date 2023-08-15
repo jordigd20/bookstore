@@ -21,7 +21,7 @@ export class SearchBookDto {
   })
   @IsOptional()
   @IsString()
-  category: string;
+  category?: string;
 
   @ApiPropertyOptional({
     default: '',

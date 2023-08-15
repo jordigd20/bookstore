@@ -13,5 +13,5 @@ export class CreateCategoryDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
-  thumbnail: string;
+  thumbnail?: string;
 }
