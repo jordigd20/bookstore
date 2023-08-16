@@ -191,6 +191,7 @@ export class BooksService {
         };
       }
 
+
       const book = await this.prisma.book.update({
         where: { id },
         data,
