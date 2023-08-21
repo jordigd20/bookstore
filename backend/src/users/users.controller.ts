@@ -1,4 +1,15 @@
-import { Controller, Get, Body, Patch, Param, ParseIntPipe, Query } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Body,
+  Patch,
+  Param,
+  ParseIntPipe,
+  Query,
+  Post,
+  Req,
+  Delete
+} from '@nestjs/common';
 import { UsersService } from './users.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { PaginationDto } from '../common/dto/pagination.dto';
@@ -40,5 +51,20 @@ export class UsersController {
   @Patch(':id')
   update(@Param('id', ParseIntPipe) id: number, @Body() updateUserDto: UpdateUserDto) {
     return this.usersService.update(id, updateUserDto);
+  }
+
+  @Get(':id/wishlist')
+  getWishlist(@Param('id', ParseIntPipe) id: number) {
+    return this.usersService.getWishlist(id);
+  }
+
+  @Post(':id/wishlist/:bookIds')
+  addToWishlist(@Param('id', ParseIntPipe) id: number, @Param('bookIds') booksIds: string) {
+    return this.usersService.addToWishlist(id, booksIds);
+  }
+
+  @Delete(':id/wishlist/:bookIds')
+  removeFromWishlist(@Param('id', ParseIntPipe) id: number, @Param('bookIds') booksIds: string) {
+    return this.usersService.removeFromWishlist(id, booksIds);
   }
 }

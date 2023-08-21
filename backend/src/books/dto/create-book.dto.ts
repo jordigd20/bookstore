@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import {
+  IsBoolean,
   IsDateString,
   IsISO31661Alpha2,
   IsInt,
@@ -77,6 +78,11 @@ export class CreateBookDto {
     maxDecimalPlaces: 2
   })
   currentPrice: number;
+
+  @ApiProperty()
+  @IsOptional()
+  @IsBoolean()
+  isBestseller?: boolean;
 
   @ApiProperty()
   @IsPositive()

@@ -98,6 +98,129 @@ export class UsersService {
     }
   }
 
+  async getWishlist(id: number) {
+    const wishlistedBooksFromUser = await this.prisma.user.findUnique({
+      where: { id },
+      select: {
+        wishlist: {
+          select: {
+            books: {
+              select: {
+                book: true
+              }
+            }
+          }
+        }
+      }
+    });
+
+    if (!wishlistedBooksFromUser) {
+      throw new NotFoundException(`User with id: ${id} not found`);
+    }
+
+    return wishlistedBooksFromUser.wishlist.books.map((book) => book.book);
+  }
+
+  async addToWishlist(id: number, bookIds: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+      select: {
+        wishlist: {
+          select: {
+            books: {
+              select: {
+                bookId: true,
+                wishlistId: true
+              }
+            }
+          }
+        }
+      }
+    });
+
+    if (!user) {
+      throw new NotFoundException(`User with id: ${id} not found`);
+    }
+
+    const userBooksId = user.wishlist.books.map((book) => book.bookId);
+    const booksToAdd = bookIds.split(',').map((bookId) => +bookId);
+
+    if (booksToAdd.some((bookId) => userBooksId.includes(bookId))) {
+      throw new BadRequestException('Some books are already in the wishlist');
+    }
+
+    try {
+      const wishlistedBooks = await this.prisma.wishlist.update({
+        where: { id: user.wishlist.books[0].wishlistId },
+        data: {
+          books: {
+            createMany: {
+              data: booksToAdd.map((bookId) => ({ bookId }))
+            }
+          }
+        },
+        select: {
+          books: true
+        }
+      });
+
+      return wishlistedBooks.books;
+    } catch (error) {
+      this.handleDBError(error);
+    }
+  }
+
+  async removeFromWishlist(id: number, bookIds: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+      select: {
+        wishlist: {
+          select: {
+            books: {
+              select: {
+                bookId: true,
+                wishlistId: true
+              }
+            }
+          }
+        }
+      }
+    });
+
+    if (!user) {
+      throw new NotFoundException(`User with id: ${id} not found`);
+    }
+
+    const userBooksId = user.wishlist.books.map((book) => book.bookId);
+    const booksToRemove = bookIds.split(',').map((bookId) => +bookId);
+
+    if (booksToRemove.some((bookId) => !userBooksId.includes(bookId))) {
+      throw new BadRequestException('Some books are not in the wishlist');
+    }
+
+    try {
+      const wishlistedBooks = await this.prisma.wishlist.update({
+        where: { id: user.wishlist.books[0].wishlistId },
+        data: {
+          books: {
+            deleteMany: {
+              bookId: {
+                in: booksToRemove
+              }
+            }
+          }
+        },
+        select: {
+          books: true
+        }
+      });
+
+      return wishlistedBooks.books;
+    } catch (error) {
+      this.handleDBError(error);
+    }
+  }
+
   handleDBError(error: any) {
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
       if (error.code === 'P2002') {
