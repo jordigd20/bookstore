@@ -4,6 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { PaginationDto } from '../common/dto/pagination.dto';
 import * as bcrypt from 'bcrypt';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { CreateBookDto } from 'src/books/dto/create-book.dto';
 
 describe('UsersService', () => {
   let service: UsersService;
@@ -14,7 +15,43 @@ describe('UsersService', () => {
         return mockUsers.slice(skip, take + skip);
       }),
       findUnique: jest.fn().mockImplementation(({ where, select }) => {
-        const { addresses } = select;
+        const { addresses, wishlist } = select;
+
+        if (wishlist && where.id === 0) {
+          return null;
+        }
+
+        if (wishlist && wishlist.select.books.select.bookId) {
+          return {
+            wishlist: {
+              books: [
+                {
+                  wishlistId: 1,
+                  bookId: 1
+                }
+              ]
+            }
+          };
+        }
+
+        if (wishlist && wishlist.select.books.select.book) {
+          return {
+            wishlist: {
+              books: [
+                {
+                  book: {
+                    ...createBookDtoMock,
+                    id: 1,
+                    slug: 'title-of-the-book',
+                    createdAt: expect.any(Date),
+                    updatedAt: expect.any(Date)
+                  }
+                }
+              ]
+            }
+          };
+        }
+
         if (where.hasOwnProperty('email')) {
           const user = mockUsers.find((user) => user.email === where.email);
           if (user) {
@@ -47,6 +84,35 @@ describe('UsersService', () => {
           ...data
         };
       })
+    },
+    wishlist: {
+      update: jest.fn().mockImplementation(({ where, data }) => {
+        if (data.books.deleteMany) {
+          return {
+            books: [
+              {
+                id: new Date().getTime(),
+                wishlistId: where.id,
+                bookId: 2,
+                createdAt: new Date(),
+                updatedAt: new Date()
+              }
+            ]
+          };
+        }
+
+        const { data: bookIds } = data.books.createMany;
+
+        return {
+          books: bookIds.map((bookId) => ({
+            id: new Date().getTime(),
+            wishlistId: where.id,
+            bookId: bookId.bookId,
+            createdAt: new Date(),
+            updatedAt: new Date()
+          }))
+        };
+      })
     }
   };
 
@@ -74,6 +140,25 @@ describe('UsersService', () => {
     lastName: 'Johnson',
     email: 'test@email.com',
     password: 'Test1234'
+  };
+
+  const createBookDtoMock: CreateBookDto = {
+    ISBN: '1234567890123',
+    title: 'title of the book',
+    description: 'description',
+    author: 'author',
+    publisher: 'publisher',
+    publishedDate: new Date(),
+    pageCount: 1,
+    averageRating: 1,
+    ratingsCount: 1,
+    imageLink: 'imageLink',
+    language: 'ES',
+    isBestseller: false,
+    currentPrice: 9.99,
+    originalPrice: 9.99,
+    discount: 0,
+    categories: ['fiction-literature']
   };
 
   beforeEach(async () => {
@@ -170,6 +255,124 @@ describe('UsersService', () => {
       await expect(
         service.update(1, { ...mockUpdateUserDto, password: 'test1234' })
       ).rejects.toThrowError(BadRequestException);
+    });
+  });
+
+  describe('getWishlist', () => {
+    it('should return an array of books from the user wishlist', async () => {
+      await expect(service.getWishlist(1)).resolves.toEqual([
+        {
+          ...createBookDtoMock,
+          id: 1,
+          slug: 'title-of-the-book',
+          createdAt: expect.any(Date),
+          updatedAt: expect.any(Date)
+        }
+      ]);
+      expect(mockPrismaService.user.findUnique).toBeCalledWith({
+        where: { id: 1 },
+        select: {
+          wishlist: {
+            select: {
+              books: {
+                select: {
+                  book: true
+                }
+              }
+            }
+          }
+        }
+      });
+    });
+  });
+
+  describe('addToWishlist', () => {
+    it('should add a book to the user wishlist', async () => {
+      await expect(service.addToWishlist(1, '3')).resolves.toEqual([
+        {
+          id: expect.any(Number),
+          wishlistId: 1,
+          bookId: 3,
+          createdAt: expect.any(Date),
+          updatedAt: expect.any(Date)
+        }
+      ]);
+      expect(mockPrismaService.user.findUnique).toBeCalledWith({
+        where: { id: 1 },
+        select: {
+          wishlist: {
+            select: {
+              books: {
+                select: {
+                  bookId: true,
+                  wishlistId: true
+                }
+              }
+            }
+          }
+        }
+      });
+      expect(mockPrismaService.wishlist.update).toBeCalledWith({
+        where: { id: 1 },
+        data: {
+          books: {
+            createMany: {
+              data: [{ bookId: 3 }]
+            }
+          }
+        },
+        select: {
+          books: true
+        }
+      });
+    });
+
+    it('should throw a NotFoundException if the user is not found', async () => {
+      await expect(service.addToWishlist(0, '3')).rejects.toThrowError(NotFoundException);
+    });
+  });
+
+  describe('removeFromWishlist', () => {
+    it('should remove a book from the user wishlist', async () => {
+      await expect(service.removeFromWishlist(1, '1')).resolves.toEqual([
+        {
+          id: expect.any(Number),
+          wishlistId: 1,
+          bookId: 2,
+          createdAt: expect.any(Date),
+          updatedAt: expect.any(Date)
+        }
+      ]);
+      expect(mockPrismaService.user.findUnique).toBeCalledWith({
+        where: { id: 1 },
+        select: {
+          wishlist: {
+            select: {
+              books: {
+                select: {
+                  bookId: true,
+                  wishlistId: true
+                }
+              }
+            }
+          }
+        }
+      });
+      expect(mockPrismaService.wishlist.update).toBeCalledWith({
+        where: { id: 1 },
+        data: {
+          books: {
+            deleteMany: {
+              bookId: {
+                in: [1]
+              }
+            }
+          }
+        },
+        select: {
+          books: true
+        }
+      });
     });
   });
 });

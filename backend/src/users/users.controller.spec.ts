@@ -4,6 +4,7 @@ import { UsersService } from './users.service';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { PaginationDto } from '../common/dto/pagination.dto';
 import { CreateUserDto } from '../auth/dto/create-user.dto';
+import { CreateBookDto } from 'src/books/dto/create-book.dto';
 
 describe('UsersController', () => {
   let controller: UsersController;
@@ -52,6 +53,65 @@ describe('UsersController', () => {
         role: 'USER',
         createdAt: new Date()
       };
+    }),
+    getWishlist: jest.fn().mockImplementation((id: number) => {
+      if (id === 0) {
+        throw new NotFoundException(`User with id: ${id} not found`);
+      }
+
+      return [
+        {
+          ...createBookDtoMock,
+          id: 1,
+          slug: 'title-of-the-book',
+          createdAt: new Date(),
+          updatedAt: new Date()
+        }
+      ];
+    }),
+    addToWishlist: jest.fn().mockImplementation((id: number, bookIds: string) => {
+      const userBooks = [4, 5, 6];
+      const booksToAdd = bookIds.split(',').map((id) => +id);
+
+      if (id === 0) {
+        throw new NotFoundException(`User with id: ${id} not found`);
+      }
+
+      if (booksToAdd.some((bookId) => userBooks.includes(bookId))) {
+        throw new BadRequestException('Some books are already in the wishlist');
+      }
+
+      return [
+        {
+          id: 1,
+          wishlistId: 2,
+          bookId: 3,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        }
+      ];
+    }),
+    removeFromWishlist: jest.fn().mockImplementation((id: number, bookIds: string) => {
+      const userBooks = [2, 3];
+      const booksToRemove = bookIds.split(',').map((id) => +id);
+
+      if (id === 0) {
+        throw new NotFoundException(`User with id: ${id} not found`);
+      }
+
+      if (booksToRemove.some((bookId) => !userBooks.includes(bookId))) {
+        throw new BadRequestException('Some books are not in the wishlist');
+      }
+
+      return userBooks
+        .filter((bookId) => !booksToRemove.includes(bookId))
+        .map((bookId) => ({
+          id: 1,
+          wishlistId: 2,
+          bookId,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        }));
     })
   };
 
@@ -69,6 +129,25 @@ describe('UsersController', () => {
     { ...mockUserDto, email: 'test4@email.com' },
     { ...mockUserDto, email: 'test5@email.com' }
   ];
+
+  const createBookDtoMock: CreateBookDto = {
+    ISBN: '1234567890123',
+    title: 'title of the book',
+    description: 'description',
+    author: 'author',
+    publisher: 'publisher',
+    publishedDate: new Date(),
+    pageCount: 1,
+    averageRating: 1,
+    ratingsCount: 1,
+    imageLink: 'imageLink',
+    language: 'ES',
+    isBestseller: false,
+    currentPrice: 9.99,
+    originalPrice: 9.99,
+    discount: 0,
+    categories: ['fiction-literature']
+  };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -154,6 +233,73 @@ describe('UsersController', () => {
           password: 'invalid'
         })
       ).toThrowError(BadRequestException);
+    });
+  });
+
+  describe('getWishlist', () => {
+    it('should return an array of books from the user wishlist', () => {
+      expect(controller.getWishlist(1)).toEqual([
+        {
+          ...createBookDtoMock,
+          id: 1,
+          slug: 'title-of-the-book',
+          createdAt: expect.any(Date),
+          updatedAt: expect.any(Date)
+        }
+      ]);
+      expect(mockUsersService.getWishlist).toHaveBeenCalledWith(1);
+    });
+
+    it('should throw an error when user is not found', () => {
+      expect(() => controller.getWishlist(0)).toThrowError(NotFoundException);
+      expect(mockUsersService.getWishlist).toHaveBeenCalledWith(0);
+    });
+  });
+
+  describe('addToWishlist', () => {
+    it('should add books to the user wishlist', () => {
+      expect(controller.addToWishlist(1, '3')).toEqual([
+        {
+          id: 1,
+          wishlistId: 2,
+          bookId: 3,
+          createdAt: expect.any(Date),
+          updatedAt: expect.any(Date)
+        }
+      ]);
+      expect(mockUsersService.addToWishlist).toHaveBeenCalledWith(1, '3');
+    });
+
+    it('should throw an error when user is not found', () => {
+      expect(() => controller.addToWishlist(0, '3')).toThrowError(NotFoundException);
+      expect(mockUsersService.addToWishlist).toHaveBeenCalledWith(0, '3');
+    });
+
+    it('should throw an error when some books are already in the wishlist', () => {
+      expect(() => controller.addToWishlist(1, '4,5')).toThrowError(BadRequestException);
+      expect(mockUsersService.addToWishlist).toHaveBeenCalledWith(1, '4,5');
+    });
+  });
+
+  describe('removeFromWishlist', () => {
+    it('should remove books from the user wishlist', () => {
+      expect(controller.removeFromWishlist(1, '3')).toEqual([
+        {
+          id: 1,
+          wishlistId: 2,
+          bookId: 2,
+          createdAt: expect.any(Date),
+          updatedAt: expect.any(Date)
+        }
+      ]);
+    });
+
+    it('should throw an error when user is not found', () => {
+      expect(() => controller.removeFromWishlist(0, '3')).toThrowError(NotFoundException);
+    });
+
+    it('should throw an error if the book is not in the wishlist', () => {
+      expect(() => controller.removeFromWishlist(1, '4')).toThrowError(BadRequestException);
     });
   });
 });
