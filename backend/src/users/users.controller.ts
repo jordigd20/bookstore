@@ -7,16 +7,24 @@ import {
   ParseIntPipe,
   Query,
   Post,
-  Req,
   Delete
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { PaginationDto } from '../common/dto/pagination.dto';
 import { FindOneUserDto } from './dto/find-one-user.dto';
-import { ApiBearerAuth, ApiOkResponse, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiCreatedResponse,
+  ApiNotFoundResponse,
+  ApiOkResponse,
+  ApiResponse,
+  ApiTags
+} from '@nestjs/swagger';
 import { UserEntity } from './entities/user.entity';
 import { Auth } from '../auth/decorators/auth.decorator';
+import { BookEntity } from '../books/entities/book.entity';
+import { WishlistedBooksEntity } from './dto/wishlisted-books.dt';
 
 @ApiTags('users')
 @Auth()
@@ -53,16 +61,20 @@ export class UsersController {
     return this.usersService.update(id, updateUserDto);
   }
 
+  @ApiOkResponse({ type: BookEntity, isArray: true })
+  @ApiNotFoundResponse({ description: 'User not found' })
   @Get(':id/wishlist')
   getWishlist(@Param('id', ParseIntPipe) id: number) {
     return this.usersService.getWishlist(id);
   }
 
+  @ApiCreatedResponse({ type: WishlistedBooksEntity, isArray: true })
   @Post(':id/wishlist/:bookIds')
   addToWishlist(@Param('id', ParseIntPipe) id: number, @Param('bookIds') booksIds: string) {
     return this.usersService.addToWishlist(id, booksIds);
   }
 
+  @ApiOkResponse({ type: WishlistedBooksEntity, isArray: true })
   @Delete(':id/wishlist/:bookIds')
   removeFromWishlist(@Param('id', ParseIntPipe) id: number, @Param('bookIds') booksIds: string) {
     return this.usersService.removeFromWishlist(id, booksIds);

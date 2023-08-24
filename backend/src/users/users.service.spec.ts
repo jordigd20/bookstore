@@ -17,11 +17,11 @@ describe('UsersService', () => {
       findUnique: jest.fn().mockImplementation(({ where, select }) => {
         const { addresses, wishlist } = select;
 
-        if (wishlist && where.id === 0) {
+        if (wishlist && typeof wishlist === 'object' && where.id === 0) {
           return null;
         }
 
-        if (wishlist && wishlist.select.books.select.bookId) {
+        if (wishlist && typeof wishlist === 'object' && wishlist.select.books.select.bookId) {
           return {
             wishlist: {
               books: [
@@ -34,7 +34,7 @@ describe('UsersService', () => {
           };
         }
 
-        if (wishlist && wishlist.select.books.select.book) {
+        if (wishlist && typeof wishlist === 'object' && wishlist.select.books.select.book) {
           return {
             wishlist: {
               books: [

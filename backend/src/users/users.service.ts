@@ -51,7 +51,9 @@ export class UsersService {
         lastName: true,
         role: true,
         createdAt: true,
-        addresses: includeAddress
+        addresses: includeAddress,
+        wishlist: true,
+        cart: true
       }
     });
 

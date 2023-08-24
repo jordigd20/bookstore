@@ -51,7 +51,13 @@ export class AuthService {
 
     const user = await this.prisma.user.findUnique({
       where: { email },
-      select: { id: true, email: true, password: true }
+      select: {
+        id: true,
+        email: true,
+        password: true,
+        wishlist: true,
+        cart: true
+      }
     });
 
     if (!user) {
