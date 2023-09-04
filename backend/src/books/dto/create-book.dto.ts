@@ -49,20 +49,6 @@ export class CreateBookDto {
   pageCount: number;
 
   @ApiProperty()
-  @IsOptional()
-  @IsNumber({
-    maxDecimalPlaces: 2
-  })
-  @Max(5)
-  averageRating?: number;
-
-  @ApiProperty()
-  @IsOptional()
-  @IsPositive()
-  @IsInt()
-  ratingsCount?: number;
-
-  @ApiProperty()
   @IsString()
   @MinLength(1)
   imageLink: string;

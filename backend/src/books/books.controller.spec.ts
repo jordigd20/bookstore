@@ -19,8 +19,6 @@ describe('BooksController', () => {
     publisher: 'publisher',
     publishedDate: new Date(),
     pageCount: 1,
-    averageRating: 1,
-    ratingsCount: 1,
     imageLink: 'imageLink',
     language: 'ES',
     currentPrice: 9.99,

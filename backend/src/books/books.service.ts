@@ -19,13 +19,9 @@ export class BooksService {
 
   async create(createBookDto: CreateBookDto) {
     try {
-      const { averageRating = 0, ratingsCount = 0, ...restOfCreateBookDto } = createBookDto;
-
       const book = await this.prisma.book.create({
         data: {
-          ...restOfCreateBookDto,
-          averageRating,
-          ratingsCount,
+          ...createBookDto,
           slug: createBookDto.title.toLowerCase().replace(/ /g, '-'),
           categories: {
             connect: createBookDto.categories.map((category) => {
@@ -48,17 +44,11 @@ export class BooksService {
 
   async findAll(searchBookDto: SearchBookDto) {
     const { skip = 0, take = 10, category, sort, price, filter, search } = searchBookDto;
-    const query: Prisma.BookWhereInput = {};
-    const orderBy: Prisma.BookOrderByWithRelationInput = {};
+    const where = {};
+    let orderBy = 'AVG(rub."rating") ASC';
 
     if (category) {
-      query.categories = {
-        some: {
-          slug: {
-            equals: category
-          }
-        }
-      };
+      where['categories'] = `c."slug" = '${category}'`;
     }
 
     if (price) {
@@ -68,41 +58,27 @@ export class BooksService {
         throw new BadRequestException("Price filter must be in format 'min-max'");
       }
 
-      query.currentPrice = {
-        gte: Number(min),
-        lte: Number(max)
-      };
+      if (isNaN(Number(min)) || isNaN(Number(max))) {
+        throw new BadRequestException('Price filter must be a number');
+      }
+
+      where['price'] = `b."currentPrice" >= ${min} AND b."currentPrice" <= ${max}`;
     }
 
     if (filter) {
       const filters = filter.split('.');
 
       if (filters.includes('discounted')) {
-        query.discount = {
-          gt: 0
-        };
+        where['discount'] = `b."discount" > 0`;
       }
 
       if (filters.includes('bestseller')) {
-        query.isBestseller = true;
+        where['isBestseller'] = `b."isBestseller" = true`;
       }
     }
 
     if (search) {
-      query.OR = [
-        {
-          title: {
-            contains: search,
-            mode: 'insensitive'
-          }
-        },
-        {
-          author: {
-            contains: search,
-            mode: 'insensitive'
-          }
-        }
-      ];
+      where['search'] = `(b."title" ILIKE '%${search}%' OR b."author" ILIKE '%${search}%')`;
     }
 
     if (sort) {
@@ -114,29 +90,58 @@ export class BooksService {
       }
 
       const orderByFields = {
-        price: 'currentPrice',
-        rating: 'averageRating',
-        title: 'title',
-        publishedDate: 'publishedDate'
+        price: 'b."currentPrice"',
+        rating: 'AVG(rub."rating")',
+        title: 'b."title"',
+        publishedDate: 'b."publishedDate"'
       };
 
-      orderBy[orderByFields[sortField]] = sortDirection;
+      if (!Object.keys(orderByFields).includes(sortField)) {
+        throw new BadRequestException(
+          `Sort field must be one of the following: ${Object.keys(orderByFields).join(', ')}`
+        );
+      }
+
+      orderBy = `${orderByFields[sortField]} ${sortDirection.toUpperCase()}`;
     }
 
     try {
       const [books, total] = await this.prisma.$transaction([
-        this.prisma.book.findMany({
-          where: query,
-          orderBy,
-          skip,
-          take,
-          include: {
-            categories: true
-          }
-        }),
-        this.prisma.book.count({
-          where: query
-        })
+        this.prisma.$queryRawUnsafe(`
+          SELECT
+            b.*,
+            COALESCE(AVG(rub."rating"), 0) AS "averageRating",
+            COUNT(rub."rating")::int AS "ratingsCount",
+            json_agg(c.*) AS "categories"
+          FROM
+            "Book" b
+          LEFT JOIN
+            "RatingUserBook" rub ON rub."bookId" = b.id
+          INNER JOIN
+            "_BookToCategory" bc ON b.id = bc."A"
+          INNER JOIN
+            "Category" c ON c.id = bc."B"
+          ${Object.keys(where).length > 0 ? `WHERE ${Object.values(where).join(' AND ')}` : ''}
+          GROUP BY
+            b.id
+          ORDER BY
+            ${orderBy}
+          LIMIT
+            ${take}
+          OFFSET
+            ${skip}
+      `),
+        this.prisma.$queryRawUnsafe(`
+          SELECT
+            COUNT(DISTINCT b.id)::int
+          FROM
+            "Book" b
+          INNER JOIN
+            "_BookToCategory" bc ON b.id = bc."A"
+          INNER JOIN
+            "Category" c ON c.id = bc."B"
+          ${Object.keys(where).length > 0 ? `WHERE ${Object.values(where).join(' AND ')}` : ''}
+      `)
       ]);
 
       return {
@@ -144,7 +149,7 @@ export class BooksService {
         pagination: {
           skip,
           take,
-          total
+          total: total[0].count
         }
       };
     } catch (error) {
@@ -154,23 +159,50 @@ export class BooksService {
 
   async findOne(term: string) {
     const where: Prisma.BookWhereUniqueInput = {} as Prisma.BookWhereUniqueInput;
+    const book: Prisma.BookWhereInput = {} as Prisma.BookWhereInput;
 
     if (!isNaN(Number(term))) {
       where.id = Number(term);
+      book.id = Number(term);
     } else {
       where.slug = term;
+      book.slug = term;
     }
 
-    const book = await this.prisma.book.findUnique({
+    const bookFoundQuery = this.prisma.book.findUnique({
       where,
-      include: { categories: true }
+      include: {
+        categories: true
+      }
     });
 
-    if (!book) {
+    const ratingBookQuery = this.prisma.ratingUserBook.groupBy({
+      by: ['bookId'],
+      where: {
+        book
+      },
+      _avg: {
+        rating: true
+      },
+      _count: {
+        rating: true
+      }
+    });
+
+    const [bookFound, ratingBook] = await this.prisma.$transaction([
+      bookFoundQuery,
+      ratingBookQuery
+    ]);
+
+    if (!bookFound) {
       throw new NotFoundException(`Book with id or slug: ${term} not found`);
     }
 
-    return book;
+    return {
+      ...bookFound,
+      averageRating: ratingBook[0]._avg.rating,
+      ratingsCount: ratingBook[0]._count.rating
+    };
   }
 
   async update(id: number, updateBookDto: UpdateBookDto) {
@@ -190,7 +222,6 @@ export class BooksService {
           })
         };
       }
-
 
       const book = await this.prisma.book.update({
         where: { id },
@@ -269,9 +300,7 @@ export class BooksService {
   handleDBError(error: any) {
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
       if (error.code === 'P2002') {
-        throw new BadRequestException(
-          `There is already a book with this ${error.meta.target[0]}`
-        );
+        throw new BadRequestException(`There is already a book with this ${error.meta.target[0]}`);
       }
 
       if (error.code === 'P2025') {

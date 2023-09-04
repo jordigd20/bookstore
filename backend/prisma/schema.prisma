@@ -23,6 +23,7 @@ model User {
   wishlist  Wishlist?
   cart      Cart?
   orders    Order[]
+  ratings   RatingUserBook[]
 }
 
 model Address {
@@ -53,8 +54,6 @@ model Book {
   publishedDate DateTime
   description   String
   pageCount     Int
-  averageRating Decimal  @db.Decimal(2, 1)
-  ratingsCount  Int      @default(0)
   imageLink     String
   language      String   @db.VarChar(2)
   currentPrice  Decimal  @db.Decimal(12, 2)
@@ -68,6 +67,7 @@ model Book {
   wishlist   WishlistBook[]
   cartBook   CartBook[]
   orderBooks OrderBook[]
+  ratings    RatingUserBook[]
 }
 
 model Category {
@@ -101,6 +101,19 @@ model WishlistBook {
   book       Book     @relation(fields: [bookId], references: [id])
 
   @@id([wishlistId, bookId])
+}
+
+model RatingUserBook {
+  rating    Decimal  @db.Decimal(2, 1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId Int
+  bookId Int
+  user   User @relation(fields: [userId], references: [id])
+  book   Book @relation(fields: [bookId], references: [id])
+
+  @@id([userId, bookId])
 }
 
 model Cart {

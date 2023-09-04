@@ -10,6 +10,7 @@ import * as bcrypt from 'bcrypt';
 import { Prisma } from '@prisma/client';
 import { PaginationDto } from '../common/dto/pagination.dto';
 import { FindOneUserDto } from './dto/find-one-user.dto';
+import { WishlistBooksDto } from './dto/wishlist-books.dto';
 
 @Injectable()
 export class UsersService {
@@ -100,7 +101,8 @@ export class UsersService {
     }
   }
 
-  async getWishlist(id: number) {
+  async getWishlist(id: number, paginationDto: PaginationDto) {
+    const { take = 10, skip = 0 } = paginationDto;
     const wishlistedBooksFromUser = await this.prisma.user.findUnique({
       where: { id },
       select: {
@@ -109,7 +111,12 @@ export class UsersService {
             books: {
               select: {
                 book: true
-              }
+              },
+              orderBy: {
+                createdAt: 'desc'
+              },
+              skip,
+              take
             }
           }
         }
@@ -123,7 +130,9 @@ export class UsersService {
     return wishlistedBooksFromUser.wishlist.books.map((book) => book.book);
   }
 
-  async addToWishlist(id: number, bookIds: string) {
+  async addToWishlist(id: number, wishlistBooksDto: WishlistBooksDto) {
+    const { bookIds: booksToAdd } = wishlistBooksDto;
+
     const user = await this.prisma.user.findUnique({
       where: { id },
       select: {
@@ -134,7 +143,8 @@ export class UsersService {
                 bookId: true,
                 wishlistId: true
               }
-            }
+            },
+            id: true
           }
         }
       }
@@ -145,7 +155,6 @@ export class UsersService {
     }
 
     const userBooksId = user.wishlist.books.map((book) => book.bookId);
-    const booksToAdd = bookIds.split(',').map((bookId) => +bookId);
 
     if (booksToAdd.some((bookId) => userBooksId.includes(bookId))) {
       throw new BadRequestException('Some books are already in the wishlist');
@@ -153,7 +162,7 @@ export class UsersService {
 
     try {
       const wishlistedBooks = await this.prisma.wishlist.update({
-        where: { id: user.wishlist.books[0].wishlistId },
+        where: { id: user.wishlist.id },
         data: {
           books: {
             createMany: {
@@ -172,7 +181,9 @@ export class UsersService {
     }
   }
 
-  async removeFromWishlist(id: number, bookIds: string) {
+  async removeFromWishlist(id: number, wishlistBooksDto: WishlistBooksDto) {
+    const { bookIds: booksToRemove } = wishlistBooksDto;
+
     const user = await this.prisma.user.findUnique({
       where: { id },
       select: {
@@ -183,7 +194,8 @@ export class UsersService {
                 bookId: true,
                 wishlistId: true
               }
-            }
+            },
+            id: true
           }
         }
       }
@@ -194,7 +206,6 @@ export class UsersService {
     }
 
     const userBooksId = user.wishlist.books.map((book) => book.bookId);
-    const booksToRemove = bookIds.split(',').map((bookId) => +bookId);
 
     if (booksToRemove.some((bookId) => !userBooksId.includes(bookId))) {
       throw new BadRequestException('Some books are not in the wishlist');
@@ -202,7 +213,7 @@ export class UsersService {
 
     try {
       const wishlistedBooks = await this.prisma.wishlist.update({
-        where: { id: user.wishlist.books[0].wishlistId },
+        where: { id: user.wishlist.id },
         data: {
           books: {
             deleteMany: {

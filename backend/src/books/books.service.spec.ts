@@ -17,8 +17,6 @@ describe('BooksService', () => {
     publisher: 'publisher',
     publishedDate: new Date(),
     pageCount: 1,
-    averageRating: 1,
-    ratingsCount: 1,
     imageLink: 'imageLink',
     language: 'ES',
     currentPrice: 9.99,
@@ -176,7 +174,47 @@ describe('BooksService', () => {
         };
       })
     },
-    $transaction: jest.fn().mockImplementation((args) => args)
+    ratingUserBook: {
+      groupBy: jest.fn().mockImplementation(({ by }) => {
+        return [
+          {
+            _avg: {
+              rating: 4.5
+            },
+            _count: {
+              rating: 1
+            },
+            bookId: 1
+          }
+        ];
+      })
+    },
+    $transaction: jest.fn().mockImplementation((args) => args),
+    $queryRawUnsafe: jest.fn().mockImplementation((args: string) => {
+      if (args.includes(`b.*`)) {
+        return [
+          {
+            ...createBookDtoMock,
+            id: 1,
+            slug: 'title-of-the-book',
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            categories: [
+              {
+                ...createCategoryDtoMock,
+                id: 1,
+                createdAt: new Date(),
+                updatedAt: new Date()
+              }
+            ]
+          }
+        ];
+      }
+
+      if (args.includes('COUNT(DISTINCT b.id)::int')) {
+        return [{ count: 1 }];
+      }
+    })
   };
 
   beforeEach(async () => {
@@ -229,26 +267,30 @@ describe('BooksService', () => {
   describe('findAll', () => {
     it('should return a list of books', async () => {
       expect(await service.findAll({})).toEqual({
-        data: {
-          ...createBookDtoMock,
-          id: 1,
-          slug: 'title-of-the-book',
-          createdAt: expect.any(Date),
-          updatedAt: expect.any(Date)
-        },
+        data: [
+          {
+            ...createBookDtoMock,
+            id: 1,
+            slug: 'title-of-the-book',
+            createdAt: expect.any(Date),
+            updatedAt: expect.any(Date),
+            categories: [
+              {
+                ...createCategoryDtoMock,
+                id: 1,
+                createdAt: expect.any(Date),
+                updatedAt: expect.any(Date)
+              }
+            ]
+          }
+        ],
         pagination: {
           skip: 0,
           take: 10,
           total: expect.any(Number)
         }
       });
-      expect(mockPrismaService.book.findMany).toHaveBeenCalledWith({
-        where: {},
-        skip: 0,
-        take: 10,
-        orderBy: {},
-        include: { categories: true }
-      });
+      expect(mockPrismaService.$queryRawUnsafe).toHaveBeenCalled();
     });
   });
 
@@ -325,7 +367,9 @@ describe('BooksService', () => {
         id: 1,
         slug: 'title-of-the-book',
         createdAt: expect.any(Date),
-        updatedAt: expect.any(Date)
+        updatedAt: expect.any(Date),
+        averageRating: 4.5,
+        ratingsCount: 1
       });
       expect(mockPrismaService.book.findUnique).toHaveBeenCalledWith({
         where: { id: 1 },

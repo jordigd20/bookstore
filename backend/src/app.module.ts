@@ -6,6 +6,7 @@ import { AuthModule } from './auth/auth.module';
 import { AddressesModule } from './addresses/addresses.module';
 import { BooksModule } from './books/books.module';
 import { CartsModule } from './carts/carts.module';
+import { RatingsModule } from './ratings/ratings.module';
 
 @Module({
   imports: [
@@ -16,7 +17,8 @@ import { CartsModule } from './carts/carts.module';
     AuthModule,
     AddressesModule,
     BooksModule,
-    CartsModule
+    CartsModule,
+    RatingsModule
   ],
   controllers: [],
   providers: []

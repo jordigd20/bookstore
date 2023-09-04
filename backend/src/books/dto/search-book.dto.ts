@@ -1,4 +1,4 @@
-import { IsEnum, IsOptional, IsPositive, IsString, Min } from 'class-validator';
+import { IsEnum, IsOptional, IsPositive, IsString, Matches, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -20,6 +20,9 @@ export class SearchBookDto {
     example: 'fiction-literature'
   })
   @IsOptional()
+  @Matches(/^[a-z]+(?:-[a-z]+)*$/, {
+    message: 'Category must be a valid slug'
+  })
   @IsString()
   category?: string;
 

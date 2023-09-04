@@ -29,7 +29,8 @@ describe('UsersService', () => {
                   wishlistId: 1,
                   bookId: 1
                 }
-              ]
+              ],
+              id: 1
             }
           };
         }
@@ -150,8 +151,6 @@ describe('UsersService', () => {
     publisher: 'publisher',
     publishedDate: new Date(),
     pageCount: 1,
-    averageRating: 1,
-    ratingsCount: 1,
     imageLink: 'imageLink',
     language: 'ES',
     isBestseller: false,
@@ -260,7 +259,7 @@ describe('UsersService', () => {
 
   describe('getWishlist', () => {
     it('should return an array of books from the user wishlist', async () => {
-      await expect(service.getWishlist(1)).resolves.toEqual([
+      await expect(service.getWishlist(1, {})).resolves.toEqual([
         {
           ...createBookDtoMock,
           id: 1,
@@ -277,7 +276,12 @@ describe('UsersService', () => {
               books: {
                 select: {
                   book: true
-                }
+                },
+                orderBy: {
+                  createdAt: 'desc'
+                },
+                skip: 0,
+                take: 10
               }
             }
           }
@@ -287,8 +291,12 @@ describe('UsersService', () => {
   });
 
   describe('addToWishlist', () => {
+    const wishlistBooksDto = {
+      bookIds: [3]
+    };
+
     it('should add a book to the user wishlist', async () => {
-      await expect(service.addToWishlist(1, '3')).resolves.toEqual([
+      await expect(service.addToWishlist(1, wishlistBooksDto)).resolves.toEqual([
         {
           id: expect.any(Number),
           wishlistId: 1,
@@ -307,7 +315,8 @@ describe('UsersService', () => {
                   bookId: true,
                   wishlistId: true
                 }
-              }
+              },
+              id: true
             }
           }
         }
@@ -328,13 +337,19 @@ describe('UsersService', () => {
     });
 
     it('should throw a NotFoundException if the user is not found', async () => {
-      await expect(service.addToWishlist(0, '3')).rejects.toThrowError(NotFoundException);
+      await expect(service.addToWishlist(0, wishlistBooksDto)).rejects.toThrowError(
+        NotFoundException
+      );
     });
   });
 
   describe('removeFromWishlist', () => {
+    const wishlistBooksDto = {
+      bookIds: [1]
+    };
+
     it('should remove a book from the user wishlist', async () => {
-      await expect(service.removeFromWishlist(1, '1')).resolves.toEqual([
+      await expect(service.removeFromWishlist(1, wishlistBooksDto)).resolves.toEqual([
         {
           id: expect.any(Number),
           wishlistId: 1,
@@ -353,7 +368,8 @@ describe('UsersService', () => {
                   bookId: true,
                   wishlistId: true
                 }
-              }
+              },
+              id: true
             }
           }
         }

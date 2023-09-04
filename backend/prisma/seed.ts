@@ -55,7 +55,7 @@ async function main() {
   });
 
   const allUsers = usersToCreate.map(
-    ({ email, firstName, lastName, password, role, wishlist, addresses, cart, orders }) => {
+    ({ email, firstName, lastName, password, role, wishlist, addresses, cart, orders }: any) => {
       const bookId1 = booksCreated[0]?.id ?? booksFound[0]?.id;
       const bookId2 = booksCreated[1]?.id ?? booksFound[1]?.id;
 
@@ -109,6 +109,7 @@ async function main() {
             ]
           }
         };
+        orders.create.status = 'COMPLETED';
       }
 
       return prisma.user.create({
