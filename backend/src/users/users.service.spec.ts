@@ -3,8 +3,9 @@ import { UsersService } from './users.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { PaginationDto } from '../common/dto/pagination.dto';
 import * as bcrypt from 'bcrypt';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { CreateBookDto } from 'src/books/dto/create-book.dto';
+import { AuthUser } from '../auth/interfaces/auth-user.interface';
 
 describe('UsersService', () => {
   let service: UsersService;
@@ -136,6 +137,17 @@ describe('UsersService', () => {
     { ...mockUser, id: 5, email: 'test5@email.com' }
   ];
 
+  const mockAuthUser: AuthUser = {
+    id: 1,
+    email: 'test@email.com',
+    firstName: 'John',
+    lastName: 'Doe',
+    role: 'USER',
+    cart: {
+      id: 1
+    }
+  };
+
   const mockUpdateUserDto = {
     firstName: 'Jane',
     lastName: 'Johnson',
@@ -189,7 +201,7 @@ describe('UsersService', () => {
 
   describe('findOne', () => {
     it('should find a user by ID with an array of addresses ', async () => {
-      await expect(service.findOne('1', { includeAddress: true })).resolves.toEqual({
+      await expect(service.findOne('1', { includeAddress: true }, mockAuthUser)).resolves.toEqual({
         id: 1,
         email: 'test@email.com',
         firstName: expect.any(String),
@@ -200,8 +212,14 @@ describe('UsersService', () => {
       });
     });
 
-    it('should find a user by email with an array of addresses ', async () => {
-      await expect(service.findOne('test3@email.com', { includeAddress: true })).resolves.toEqual({
+    it('should find a user by email with an array of addresses', async () => {
+      await expect(
+        service.findOne(
+          'test3@email.com',
+          { includeAddress: true },
+          { ...mockAuthUser, id: 3, email: 'test3@email.com' }
+        )
+      ).resolves.toEqual({
         id: 3,
         email: 'test3@email.com',
         firstName: expect.any(String),
@@ -212,8 +230,8 @@ describe('UsersService', () => {
       });
     });
 
-    it('should find a user by ID without an array of addresses ', async () => {
-      await expect(service.findOne('1', { includeAddress: false })).resolves.toEqual({
+    it('should find a user by ID without an array of addresses', async () => {
+      await expect(service.findOne('1', { includeAddress: false }, mockAuthUser)).resolves.toEqual({
         id: 1,
         email: 'test@email.com',
         firstName: expect.any(String),
@@ -224,9 +242,15 @@ describe('UsersService', () => {
     });
 
     it('should throw a NotFoundException if the user is not found', async () => {
-      await expect(service.findOne('20', { includeAddress: false })).rejects.toThrowError(
-        NotFoundException
-      );
+      await expect(
+        service.findOne('20', { includeAddress: false }, { ...mockAuthUser, id: 20 })
+      ).rejects.toThrowError(NotFoundException);
+    });
+
+    it('should throw a ForbiddenException if the user is not admin and is trying to get another user', async () => {
+      await expect(
+        service.findOne('1', { includeAddress: false }, { ...mockAuthUser, id: 2 })
+      ).rejects.toThrowError(ForbiddenException);
     });
   });
 
@@ -236,7 +260,7 @@ describe('UsersService', () => {
         user.password = await bcrypt.hash('Test1234', 10);
       }
 
-      await expect(service.update(1, mockUpdateUserDto)).resolves.toEqual({
+      await expect(service.update(1, mockUpdateUserDto, mockAuthUser)).resolves.toEqual({
         id: 1,
         email: mockUpdateUserDto.email,
         firstName: mockUpdateUserDto.firstName,
@@ -247,19 +271,27 @@ describe('UsersService', () => {
     });
 
     it('should throw a NotFoundException if the user is not found', async () => {
-      await expect(service.update(20, mockUpdateUserDto)).rejects.toThrowError(NotFoundException);
+      await expect(
+        service.update(20, mockUpdateUserDto, { ...mockAuthUser, id: 20 })
+      ).rejects.toThrowError(NotFoundException);
     });
 
     it('should throw a BadRequestException if the password is not valid', async () => {
       await expect(
-        service.update(1, { ...mockUpdateUserDto, password: 'test1234' })
+        service.update(1, { ...mockUpdateUserDto, password: 'test1234' }, mockAuthUser)
       ).rejects.toThrowError(BadRequestException);
+    });
+
+    it('should throw a ForbiddenException if the user is not admin and is trying to update another user', async () => {
+      await expect(
+        service.update(1, mockUpdateUserDto, { ...mockAuthUser, id: 2 })
+      ).rejects.toThrowError(ForbiddenException);
     });
   });
 
   describe('getWishlist', () => {
     it('should return an array of books from the user wishlist', async () => {
-      await expect(service.getWishlist(1, {})).resolves.toEqual([
+      await expect(service.getWishlist(1, {}, mockAuthUser)).resolves.toEqual([
         {
           ...createBookDtoMock,
           id: 1,
@@ -288,6 +320,12 @@ describe('UsersService', () => {
         }
       });
     });
+
+    it('should throw a ForbiddenException if the user is not admin and is trying to get another user wishlist', async () => {
+      await expect(service.getWishlist(1, {}, { ...mockAuthUser, id: 2 })).rejects.toThrowError(
+        ForbiddenException
+      );
+    });
   });
 
   describe('addToWishlist', () => {
@@ -296,7 +334,7 @@ describe('UsersService', () => {
     };
 
     it('should add a book to the user wishlist', async () => {
-      await expect(service.addToWishlist(1, wishlistBooksDto)).resolves.toEqual([
+      await expect(service.addToWishlist(1, wishlistBooksDto, mockAuthUser)).resolves.toEqual([
         {
           id: expect.any(Number),
           wishlistId: 1,
@@ -337,9 +375,15 @@ describe('UsersService', () => {
     });
 
     it('should throw a NotFoundException if the user is not found', async () => {
-      await expect(service.addToWishlist(0, wishlistBooksDto)).rejects.toThrowError(
-        NotFoundException
-      );
+      await expect(
+        service.addToWishlist(0, wishlistBooksDto, { ...mockAuthUser, id: 0 })
+      ).rejects.toThrowError(NotFoundException);
+    });
+
+    it('should throw a ForbiddenException if the user is not admin and is trying to add a book to another user wishlist', async () => {
+      await expect(
+        service.addToWishlist(1, wishlistBooksDto, { ...mockAuthUser, id: 2 })
+      ).rejects.toThrowError(ForbiddenException);
     });
   });
 
@@ -349,7 +393,7 @@ describe('UsersService', () => {
     };
 
     it('should remove a book from the user wishlist', async () => {
-      await expect(service.removeFromWishlist(1, wishlistBooksDto)).resolves.toEqual([
+      await expect(service.removeFromWishlist(1, wishlistBooksDto, mockAuthUser)).resolves.toEqual([
         {
           id: expect.any(Number),
           wishlistId: 1,
@@ -389,6 +433,12 @@ describe('UsersService', () => {
           books: true
         }
       });
+    });
+
+    it('should throw a ForbiddenException if the user is not admin and is trying to remove a book from another user wishlist', async () => {
+      await expect(
+        service.removeFromWishlist(1, wishlistBooksDto, { ...mockAuthUser, id: 2 })
+      ).rejects.toThrowError(ForbiddenException);
     });
   });
 });

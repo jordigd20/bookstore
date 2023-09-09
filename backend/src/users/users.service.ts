@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   InternalServerErrorException,
   NotFoundException
@@ -11,6 +12,8 @@ import { Prisma } from '@prisma/client';
 import { PaginationDto } from '../common/dto/pagination.dto';
 import { FindOneUserDto } from './dto/find-one-user.dto';
 import { WishlistBooksDto } from './dto/wishlist-books.dto';
+import { AuthUser } from '../auth/interfaces/auth-user.interface';
+import { ValidRoles } from '../auth/interfaces/valid-roles.interface';
 
 @Injectable()
 export class UsersService {
@@ -33,7 +36,7 @@ export class UsersService {
     });
   }
 
-  async findOne(term: string, findOneDto: FindOneUserDto) {
+  async findOne(term: string, findOneDto: FindOneUserDto, authUser: AuthUser) {
     const { includeAddress = false } = findOneDto;
     const where = {} as { id: number } | { email: string };
 
@@ -41,6 +44,14 @@ export class UsersService {
       where['id'] = +term;
     } else {
       where['email'] = term;
+    }
+
+    if (
+      authUser.role !== ValidRoles.admin &&
+      ((where['id'] && where['id'] !== authUser.id) ||
+        (where['email'] && where['email'] !== authUser.email))
+    ) {
+      throw new ForbiddenException('You can only get your own user');
     }
 
     const user = await this.prisma.user.findUnique({
@@ -65,7 +76,11 @@ export class UsersService {
     return user;
   }
 
-  async update(id: number, updateUserDto: UpdateUserDto) {
+  async update(id: number, updateUserDto: UpdateUserDto, authUser: AuthUser) {
+    if (authUser.role !== ValidRoles.admin && id !== authUser.id) {
+      throw new ForbiddenException('You can only update your own user');
+    }
+
     const user = await this.prisma.user.findUnique({
       where: { id },
       select: {
@@ -101,8 +116,13 @@ export class UsersService {
     }
   }
 
-  async getWishlist(id: number, paginationDto: PaginationDto) {
+  async getWishlist(id: number, paginationDto: PaginationDto, authUser: AuthUser) {
     const { take = 10, skip = 0 } = paginationDto;
+
+    if (authUser.role !== ValidRoles.admin && id !== authUser.id) {
+      throw new ForbiddenException('You can only get your own wishlist');
+    }
+
     const wishlistedBooksFromUser = await this.prisma.user.findUnique({
       where: { id },
       select: {
@@ -130,8 +150,12 @@ export class UsersService {
     return wishlistedBooksFromUser.wishlist.books.map((book) => book.book);
   }
 
-  async addToWishlist(id: number, wishlistBooksDto: WishlistBooksDto) {
+  async addToWishlist(id: number, wishlistBooksDto: WishlistBooksDto, authUser: AuthUser) {
     const { bookIds: booksToAdd } = wishlistBooksDto;
+
+    if (authUser.role !== ValidRoles.admin && id !== authUser.id) {
+      throw new ForbiddenException('You can only add books to your own wishlist');
+    }
 
     const user = await this.prisma.user.findUnique({
       where: { id },
@@ -181,8 +205,12 @@ export class UsersService {
     }
   }
 
-  async removeFromWishlist(id: number, wishlistBooksDto: WishlistBooksDto) {
+  async removeFromWishlist(id: number, wishlistBooksDto: WishlistBooksDto, authUser: AuthUser) {
     const { bookIds: booksToRemove } = wishlistBooksDto;
+
+    if (authUser.role !== ValidRoles.admin && id !== authUser.id) {
+      throw new ForbiddenException('You can only remove books from your own wishlist');
+    }
 
     const user = await this.prisma.user.findUnique({
       where: { id },

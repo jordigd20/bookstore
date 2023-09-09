@@ -6,6 +6,8 @@ import { PaginationDto } from '../common/dto/pagination.dto';
 import { CreateUserDto } from '../auth/dto/create-user.dto';
 import { CreateBookDto } from 'src/books/dto/create-book.dto';
 import { WishlistBooksDto } from './dto/wishlist-books.dto';
+import { FindOneUserDto } from './dto/find-one-user.dto';
+import { AuthUser } from '../auth/interfaces/auth-user.interface';
 
 describe('UsersController', () => {
   let controller: UsersController;
@@ -17,7 +19,7 @@ describe('UsersController', () => {
     }),
     findOne: jest
       .fn()
-      .mockImplementation((id: string, { includeAddress }: { includeAddress: boolean }) => {
+      .mockImplementation((id: string, { includeAddress }: FindOneUserDto, authUser: AuthUser) => {
         const { password, ...data } = mockUserDto;
 
         if (id !== '1') {
@@ -37,7 +39,7 @@ describe('UsersController', () => {
 
         return result;
       }),
-    update: jest.fn().mockImplementation((id: number, dto: CreateUserDto) => {
+    update: jest.fn().mockImplementation((id: number, dto: CreateUserDto, authUser: AuthUser) => {
       const { password, ...data } = dto;
 
       if (id !== 1) {
@@ -55,7 +57,7 @@ describe('UsersController', () => {
         createdAt: new Date()
       };
     }),
-    getWishlist: jest.fn().mockImplementation((id: number) => {
+    getWishlist: jest.fn().mockImplementation((id: number, authUser: AuthUser) => {
       if (id === 0) {
         throw new NotFoundException(`User with id: ${id} not found`);
       }
@@ -72,7 +74,7 @@ describe('UsersController', () => {
     }),
     addToWishlist: jest
       .fn()
-      .mockImplementation((id: number, wishlistBooksDto: WishlistBooksDto) => {
+      .mockImplementation((id: number, wishlistBooksDto: WishlistBooksDto, authUser: AuthUser) => {
         const userBooks = [4, 5, 6];
         const { bookIds: booksToAdd } = wishlistBooksDto;
 
@@ -96,7 +98,7 @@ describe('UsersController', () => {
       }),
     removeFromWishlist: jest
       .fn()
-      .mockImplementation((id: number, wishlistBooksDto: WishlistBooksDto) => {
+      .mockImplementation((id: number, wishlistBooksDto: WishlistBooksDto, authUser: AuthUser) => {
         const userBooks = [2, 3];
         const { bookIds: booksToRemove } = wishlistBooksDto;
 
@@ -134,6 +136,15 @@ describe('UsersController', () => {
     { ...mockUserDto, email: 'test4@email.com' },
     { ...mockUserDto, email: 'test5@email.com' }
   ];
+
+  const mockAuthUser: AuthUser = {
+    ...mockUserDto,
+    id: 1,
+    role: 'USER',
+    cart: {
+      id: 1
+    }
+  };
 
   const createBookDtoMock: CreateBookDto = {
     ISBN: '1234567890123',
@@ -184,7 +195,7 @@ describe('UsersController', () => {
 
   describe('findOne', () => {
     it('should find a user with an array of addresses', () => {
-      expect(controller.findOne('1', { includeAddress: true })).toEqual({
+      expect(controller.findOne('1', { includeAddress: true }, mockAuthUser)).toEqual({
         id: expect.any(String),
         email: mockUserDto.email,
         firstName: mockUserDto.firstName,
@@ -196,7 +207,7 @@ describe('UsersController', () => {
     });
 
     it('should find a user without addresses', () => {
-      expect(controller.findOne('1', { includeAddress: false })).toEqual({
+      expect(controller.findOne('1', { includeAddress: false }, mockAuthUser)).toEqual({
         id: expect.any(String),
         email: mockUserDto.email,
         firstName: mockUserDto.firstName,
@@ -207,7 +218,7 @@ describe('UsersController', () => {
     });
 
     it('should throw an error when user is not found', () => {
-      expect(() => controller.findOne('2', { includeAddress: false })).toThrowError(
+      expect(() => controller.findOne('2', { includeAddress: false }, mockAuthUser)).toThrowError(
         NotFoundException
       );
     });
@@ -215,7 +226,7 @@ describe('UsersController', () => {
 
   describe('update', () => {
     it('should update a user', () => {
-      expect(controller.update(1, mockUserDto)).toEqual({
+      expect(controller.update(1, mockUserDto, mockAuthUser)).toEqual({
         id: expect.any(Number),
         email: mockUserDto.email,
         firstName: mockUserDto.firstName,
@@ -226,22 +237,26 @@ describe('UsersController', () => {
     });
 
     it('should throw an error when user is not found', () => {
-      expect(() => controller.update(2, mockUserDto)).toThrowError(NotFoundException);
+      expect(() => controller.update(2, mockUserDto, mockAuthUser)).toThrowError(NotFoundException);
     });
 
     it('should throw an error when the password is invalid', () => {
       expect(() =>
-        controller.update(1, {
-          ...mockUserDto,
-          password: 'invalid'
-        })
+        controller.update(
+          1,
+          {
+            ...mockUserDto,
+            password: 'invalid'
+          },
+          mockAuthUser
+        )
       ).toThrowError(BadRequestException);
     });
   });
 
   describe('getWishlist', () => {
     it('should return an array of books from the user wishlist', () => {
-      expect(controller.getWishlist(1, {})).toEqual([
+      expect(controller.getWishlist(1, {}, mockAuthUser)).toEqual([
         {
           ...createBookDtoMock,
           id: 1,
@@ -250,12 +265,12 @@ describe('UsersController', () => {
           updatedAt: expect.any(Date)
         }
       ]);
-      expect(mockUsersService.getWishlist).toHaveBeenCalledWith(1, {});
+      expect(mockUsersService.getWishlist).toHaveBeenCalledWith(1, {}, mockAuthUser);
     });
 
     it('should throw an error when user is not found', () => {
-      expect(() => controller.getWishlist(0, {})).toThrowError(NotFoundException);
-      expect(mockUsersService.getWishlist).toHaveBeenCalledWith(0, {});
+      expect(() => controller.getWishlist(0, {}, mockAuthUser)).toThrowError(NotFoundException);
+      expect(mockUsersService.getWishlist).toHaveBeenCalledWith(0, {}, mockAuthUser);
     });
   });
 
@@ -265,7 +280,7 @@ describe('UsersController', () => {
     };
 
     it('should add books to the user wishlist', () => {
-      expect(controller.addToWishlist(1, wishlistBooksDto)).toEqual([
+      expect(controller.addToWishlist(1, wishlistBooksDto, mockAuthUser)).toEqual([
         {
           id: 1,
           wishlistId: 2,
@@ -274,19 +289,33 @@ describe('UsersController', () => {
           updatedAt: expect.any(Date)
         }
       ]);
-      expect(mockUsersService.addToWishlist).toHaveBeenCalledWith(1, wishlistBooksDto);
+      expect(mockUsersService.addToWishlist).toHaveBeenCalledWith(
+        1,
+        wishlistBooksDto,
+        mockAuthUser
+      );
     });
 
     it('should throw an error when user is not found', () => {
-      expect(() => controller.addToWishlist(0, wishlistBooksDto)).toThrowError(NotFoundException);
-      expect(mockUsersService.addToWishlist).toHaveBeenCalledWith(0, wishlistBooksDto);
+      expect(() => controller.addToWishlist(0, wishlistBooksDto, mockAuthUser)).toThrowError(
+        NotFoundException
+      );
+      expect(mockUsersService.addToWishlist).toHaveBeenCalledWith(
+        0,
+        wishlistBooksDto,
+        mockAuthUser
+      );
     });
 
     it('should throw an error when some books are already in the wishlist', () => {
-      expect(() => controller.addToWishlist(1, { bookIds: [4, 5] })).toThrowError(
+      expect(() => controller.addToWishlist(1, { bookIds: [4, 5] }, mockAuthUser)).toThrowError(
         BadRequestException
       );
-      expect(mockUsersService.addToWishlist).toHaveBeenCalledWith(1, { bookIds: [4, 5] });
+      expect(mockUsersService.addToWishlist).toHaveBeenCalledWith(
+        1,
+        { bookIds: [4, 5] },
+        mockAuthUser
+      );
     });
   });
 
@@ -295,7 +324,7 @@ describe('UsersController', () => {
       bookIds: [3]
     };
     it('should remove books from the user wishlist', () => {
-      expect(controller.removeFromWishlist(1, wishlistBooksDto)).toEqual([
+      expect(controller.removeFromWishlist(1, wishlistBooksDto, mockAuthUser)).toEqual([
         {
           id: 1,
           wishlistId: 2,
@@ -307,13 +336,13 @@ describe('UsersController', () => {
     });
 
     it('should throw an error when user is not found', () => {
-      expect(() => controller.removeFromWishlist(0, wishlistBooksDto)).toThrowError(
+      expect(() => controller.removeFromWishlist(0, wishlistBooksDto, mockAuthUser)).toThrowError(
         NotFoundException
       );
     });
 
     it('should throw an error if the book is not in the wishlist', () => {
-      expect(() => controller.removeFromWishlist(1, { bookIds: [4] })).toThrowError(
+      expect(() => controller.removeFromWishlist(1, { bookIds: [4] }, mockAuthUser)).toThrowError(
         BadRequestException
       );
     });
