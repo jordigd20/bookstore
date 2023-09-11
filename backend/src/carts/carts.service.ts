@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   InternalServerErrorException,
   NotFoundException
@@ -8,12 +9,18 @@ import { AddBookToCartDto } from './dto/add-book-to-cart.dto';
 import { UpdateCartDto } from './dto/update-cart.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
+import { AuthUser } from '../auth/interfaces/auth-user.interface';
+import { ValidRoles } from '../auth/interfaces/valid-roles.interface';
 
 @Injectable()
 export class CartsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async addBookToCart(id: number, addBookToCartDto: AddBookToCartDto) {
+  async addBookToCart(id: number, addBookToCartDto: AddBookToCartDto, authUser: AuthUser) {
+    if (authUser.role !== ValidRoles.admin && authUser.cart.id !== id) {
+      throw new ForbiddenException('You can only add books to your own cart');
+    }
+
     try {
       const cart = await this.prisma.cart.update({
         where: { id },
@@ -35,7 +42,11 @@ export class CartsService {
     }
   }
 
-  async findOne(id: number) {
+  async findOne(id: number, authUser: AuthUser) {
+    if (authUser.role !== ValidRoles.admin && authUser.cart.id !== id) {
+      throw new ForbiddenException('You can only get your own cart');
+    }
+
     const cart = await this.prisma.cart.findUnique({
       where: { id },
       include: {
@@ -50,7 +61,11 @@ export class CartsService {
     return cart;
   }
 
-  async updateBook(id: number, bookId: number, updateCartDto: UpdateCartDto) {
+  async updateBook(id: number, bookId: number, updateCartDto: UpdateCartDto, authUser: AuthUser) {
+    if (authUser.role !== ValidRoles.admin && authUser.cart.id !== id) {
+      throw new ForbiddenException('You can only update your own cart');
+    }
+
     try {
       const cartBook = await this.prisma.cartBook.update({
         where: {
@@ -70,7 +85,11 @@ export class CartsService {
     }
   }
 
-  async removeBook(id: number, bookId: number) {
+  async removeBook(id: number, bookId: number, authUser: AuthUser) {
+    if (authUser.role !== ValidRoles.admin && authUser.cart.id !== id) {
+      throw new ForbiddenException('You can only remove books from your own cart');
+    }
+
     try {
       await this.prisma.cartBook.delete({
         where: {

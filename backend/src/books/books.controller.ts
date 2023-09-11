@@ -28,6 +28,7 @@ import { UpdateCategoryDto } from './dto/update-category.dto';
 import { BookEntity } from './entities/book.entity';
 import { CategoryEntity } from './entities/category.entity';
 import { FindAllBooksEntity } from './entities/find-all-books.entity';
+import { ValidRoles } from '../auth/interfaces/valid-roles.interface';
 
 @ApiTags('books')
 @Auth()
@@ -38,6 +39,7 @@ export class BooksController {
 
   @ApiCreatedResponse({ type: BookEntity })
   @ApiBadRequestResponse({ description: 'Invalid data provided' })
+  @Auth(ValidRoles.admin)
   @Post()
   create(@Body() createBookDto: CreateBookDto) {
     return this.booksService.create(createBookDto);
@@ -58,6 +60,7 @@ export class BooksController {
 
   @ApiCreatedResponse({ type: CategoryEntity })
   @ApiBadRequestResponse({ description: 'Invalid data provided' })
+  @Auth(ValidRoles.admin)
   @Post('categories')
   createCategory(@Body() createCategoryDto: CreateCategoryDto) {
     return this.booksService.createCategory(createCategoryDto);
@@ -65,6 +68,7 @@ export class BooksController {
 
   @ApiOkResponse({ type: CategoryEntity })
   @ApiBadRequestResponse({ description: 'Invalid data provided' })
+  @Auth(ValidRoles.admin)
   @Patch('categories/:id')
   updateCategory(
     @Param('id', ParseIntPipe) id: number,
@@ -82,6 +86,7 @@ export class BooksController {
 
   @ApiOkResponse({ type: BookEntity })
   @ApiBadRequestResponse({ description: 'Invalid data provided' })
+  @Auth(ValidRoles.admin)
   @Patch(':id')
   update(@Param('id', ParseIntPipe) id: number, @Body() updateBookDto: UpdateBookDto) {
     return this.booksService.update(id, updateBookDto);
@@ -89,6 +94,7 @@ export class BooksController {
 
   @ApiOkResponse({ description: 'Address deleted successfully' })
   @ApiBadRequestResponse({ description: 'Invalid data provided' })
+  @Auth(ValidRoles.admin)
   @Delete(':id')
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.booksService.remove(id);

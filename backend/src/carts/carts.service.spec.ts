@@ -2,10 +2,22 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { CartsService } from './carts.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { AuthUser } from '../auth/interfaces/auth-user.interface';
 
 describe('CartsService', () => {
   let service: CartsService;
+
+  const mockAuthUser: AuthUser = {
+    id: 1,
+    email: 'johndoe@email.com',
+    firstName: 'John',
+    lastName: 'Doe',
+    role: 'USER',
+    cart: {
+      id: 1
+    }
+  };
 
   const mockPrismaService = {
     cart: {
@@ -131,7 +143,7 @@ describe('CartsService', () => {
     };
 
     it('should add a book to the cart', () => {
-      expect(service.addBookToCart(1, mockAddBookToCartDto)).resolves.toEqual([
+      expect(service.addBookToCart(1, mockAddBookToCartDto, mockAuthUser)).resolves.toEqual([
         {
           ...mockAddBookToCartDto.books[0],
           cartId: 1,
@@ -155,16 +167,26 @@ describe('CartsService', () => {
     });
 
     it('should throw an error if cart not found', () => {
-      expect(service.addBookToCart(0, mockAddBookToCartDto)).rejects.toThrowError(
-        BadRequestException
-      );
+      expect(
+        service.addBookToCart(0, mockAddBookToCartDto, { ...mockAuthUser, cart: { id: 0 } })
+      ).rejects.toThrowError(BadRequestException);
+      expect(mockPrismaService.cart.update).toHaveBeenCalled();
+    });
+
+    it('should throw an error if a user tries to add a book to another user cart', () => {
+      expect(
+        service.addBookToCart(1, mockAddBookToCartDto, {
+          ...mockAuthUser,
+          cart: { id: 0 }
+        })
+      ).rejects.toThrowError(ForbiddenException);
       expect(mockPrismaService.cart.update).toHaveBeenCalled();
     });
   });
 
   describe('findOne', () => {
     it('should return a cart', async () => {
-      await expect(service.findOne(1)).resolves.toEqual({
+      await expect(service.findOne(1, mockAuthUser)).resolves.toEqual({
         id: 1,
         createdAt: expect.any(Date),
         updatedAt: expect.any(Date),
@@ -188,9 +210,23 @@ describe('CartsService', () => {
     });
 
     it('should throw an error if cart not found', async () => {
-      await expect(service.findOne(0)).rejects.toThrowError(NotFoundException);
+      await expect(service.findOne(0, { ...mockAuthUser, cart: { id: 0 } })).rejects.toThrowError(
+        NotFoundException
+      );
       expect(mockPrismaService.cart.findUnique).toHaveBeenCalledWith({
         where: { id: 0 },
+        include: {
+          books: true
+        }
+      });
+    });
+
+    it('should throw an error if a user tries to get another user cart', async () => {
+      await expect(service.findOne(1, { ...mockAuthUser, cart: { id: 0 } })).rejects.toThrowError(
+        ForbiddenException
+      );
+      expect(mockPrismaService.cart.findUnique).toHaveBeenCalledWith({
+        where: { id: 1 },
         include: {
           books: true
         }
@@ -200,7 +236,7 @@ describe('CartsService', () => {
 
   describe('updateBook', () => {
     it('should update a book in the cart', async () => {
-      await expect(service.updateBook(1, 8, { quantity: 2 })).resolves.toEqual({
+      await expect(service.updateBook(1, 8, { quantity: 2 }, mockAuthUser)).resolves.toEqual({
         quantity: 2,
         createdAt: expect.any(Date),
         updatedAt: expect.any(Date),
@@ -221,16 +257,23 @@ describe('CartsService', () => {
     });
 
     it('should throw an error if cart not found', async () => {
-      await expect(service.updateBook(0, 8, { quantity: 2 })).rejects.toThrowError(
-        BadRequestException
-      );
+      await expect(
+        service.updateBook(0, 8, { quantity: 2 }, { ...mockAuthUser, cart: { id: 0 } })
+      ).rejects.toThrowError(BadRequestException);
+      expect(mockPrismaService.cartBook.update).toHaveBeenCalled();
+    });
+
+    it('should throw an error if a user tries to update a book in another user cart', async () => {
+      await expect(
+        service.updateBook(1, 8, { quantity: 2 }, { ...mockAuthUser, cart: { id: 0 } })
+      ).rejects.toThrowError(ForbiddenException);
       expect(mockPrismaService.cartBook.update).toHaveBeenCalled();
     });
   });
 
   describe('removeBook', () => {
     it('should remove a book from the cart', async () => {
-      await expect(service.removeBook(1, 8)).resolves.toEqual({
+      await expect(service.removeBook(1, 8, mockAuthUser)).resolves.toEqual({
         message: 'Book removed successfully',
         statusCode: 200
       });
@@ -245,12 +288,23 @@ describe('CartsService', () => {
     });
 
     it('should throw an error if cart not found', async () => {
-      await expect(service.removeBook(0, 8)).rejects.toThrowError(BadRequestException);
+      await expect(
+        service.removeBook(0, 8, { ...mockAuthUser, cart: { id: 0 } })
+      ).rejects.toThrowError(BadRequestException);
       expect(mockPrismaService.cartBook.delete).toHaveBeenCalled();
     });
 
     it('should throw an error if book not found', async () => {
-      await expect(service.removeBook(1, 0)).rejects.toThrowError(BadRequestException);
+      await expect(service.removeBook(1, 0, mockAuthUser)).rejects.toThrowError(
+        BadRequestException
+      );
+      expect(mockPrismaService.cartBook.delete).toHaveBeenCalled();
+    });
+
+    it('should throw an error if a user tries to remove a book from another user cart', async () => {
+      await expect(
+        service.removeBook(1, 8, { ...mockAuthUser, cart: { id: 0 } })
+      ).rejects.toThrowError(ForbiddenException);
       expect(mockPrismaService.cartBook.delete).toHaveBeenCalled();
     });
   });
