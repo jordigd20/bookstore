@@ -2,6 +2,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { RatingsService } from './ratings.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateBookDto } from '../books/dto/create-book.dto';
+import { AuthUser } from '../auth/interfaces/auth-user.interface';
+import { ForbiddenException } from '@nestjs/common';
 
 describe('RatingsService', () => {
   let service: RatingsService;
@@ -86,6 +88,17 @@ describe('RatingsService', () => {
     categories: ['fiction-literature']
   };
 
+  const mockAuthUser: AuthUser = {
+    id: 1,
+    email: 'johndoe@email.com',
+    firstName: 'John',
+    lastName: 'Doe',
+    role: 'USER',
+    cart: {
+      id: 1
+    }
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -106,7 +119,7 @@ describe('RatingsService', () => {
 
   describe('getNotRatedBooks', () => {
     it('should return an array of books not rated by the user', async () => {
-      await expect(service.getNotRatedBooks(1, {})).resolves.toEqual({
+      await expect(service.getNotRatedBooks(1, {}, mockAuthUser)).resolves.toEqual({
         data: [
           {
             ...createBookDtoMock,
@@ -134,11 +147,17 @@ describe('RatingsService', () => {
       expect(mockPrismaService.orderBook.findMany).toBeCalled();
       expect(mockPrismaService.orderBook.count).toBeCalled();
     });
+
+    it('should throw an error when user tries to see the books of another user', async () => {
+      await expect(service.getNotRatedBooks(0, {}, mockAuthUser)).rejects.toThrowError(
+        ForbiddenException
+      );
+    });
   });
 
   describe('getRatedBooks', () => {
     it('should return an array of books rated by the user', async () => {
-      await expect(service.getRatedBooks(1, {})).resolves.toEqual({
+      await expect(service.getRatedBooks(1, {}, mockAuthUser)).resolves.toEqual({
         data: [
           {
             book: {
@@ -160,6 +179,12 @@ describe('RatingsService', () => {
       expect(mockPrismaService.ratingUserBook.findMany).toBeCalled();
       expect(mockPrismaService.ratingUserBook.count).toBeCalled();
     });
+
+    it('should throw an error when user tries to see the books of another user', async () => {
+      await expect(service.getRatedBooks(0, {}, mockAuthUser)).rejects.toThrowError(
+        ForbiddenException
+      );
+    });
   });
 
   describe('rateBook', () => {
@@ -169,7 +194,7 @@ describe('RatingsService', () => {
     };
 
     it('should rate a book', async () => {
-      await expect(service.rateBook(1, rateBookDto)).resolves.toEqual({
+      await expect(service.rateBook(1, rateBookDto, mockAuthUser)).resolves.toEqual({
         book: {
           ...createBookDtoMock,
           id: 1,
@@ -190,6 +215,12 @@ describe('RatingsService', () => {
       });
       expect(mockPrismaService.orderBook.findMany).toBeCalled();
       expect(mockPrismaService.ratingUserBook.upsert).toBeCalled();
+    });
+
+    it('should throw an error when user tries to rate the books of another user', async () => {
+      await expect(
+        service.rateBook(0, { ...rateBookDto, bookId: 0 }, mockAuthUser)
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 });

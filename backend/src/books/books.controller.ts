@@ -16,6 +16,7 @@ import {
   ApiBadRequestResponse,
   ApiBearerAuth,
   ApiCreatedResponse,
+  ApiForbiddenResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiTags
@@ -39,6 +40,7 @@ export class BooksController {
 
   @ApiCreatedResponse({ type: BookEntity })
   @ApiBadRequestResponse({ description: 'Invalid data provided' })
+  @ApiForbiddenResponse({ description: 'Forbidden' })
   @Auth(ValidRoles.admin)
   @Post()
   create(@Body() createBookDto: CreateBookDto) {
@@ -60,6 +62,7 @@ export class BooksController {
 
   @ApiCreatedResponse({ type: CategoryEntity })
   @ApiBadRequestResponse({ description: 'Invalid data provided' })
+  @ApiForbiddenResponse({ description: 'Forbidden' })
   @Auth(ValidRoles.admin)
   @Post('categories')
   createCategory(@Body() createCategoryDto: CreateCategoryDto) {
@@ -68,6 +71,7 @@ export class BooksController {
 
   @ApiOkResponse({ type: CategoryEntity })
   @ApiBadRequestResponse({ description: 'Invalid data provided' })
+  @ApiForbiddenResponse({ description: 'Forbidden' })
   @Auth(ValidRoles.admin)
   @Patch('categories/:id')
   updateCategory(
@@ -86,6 +90,7 @@ export class BooksController {
 
   @ApiOkResponse({ type: BookEntity })
   @ApiBadRequestResponse({ description: 'Invalid data provided' })
+  @ApiForbiddenResponse({ description: 'Forbidden' })
   @Auth(ValidRoles.admin)
   @Patch(':id')
   update(@Param('id', ParseIntPipe) id: number, @Body() updateBookDto: UpdateBookDto) {
@@ -94,6 +99,7 @@ export class BooksController {
 
   @ApiOkResponse({ description: 'Address deleted successfully' })
   @ApiBadRequestResponse({ description: 'Invalid data provided' })
+  @ApiForbiddenResponse({ description: 'Forbidden' })
   @Auth(ValidRoles.admin)
   @Delete(':id')
   remove(@Param('id', ParseIntPipe) id: number) {

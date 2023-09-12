@@ -1,20 +1,32 @@
-import { BadRequestException, Injectable, InternalServerErrorException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  InternalServerErrorException
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { PaginationDto } from 'src/common/dto/pagination.dto';
+import { PaginationDto } from '../common/dto/pagination.dto';
 import { Prisma } from '@prisma/client';
 import { RateBookDto } from './dto/rate-book.dto';
+import { AuthUser } from '../auth/interfaces/auth-user.interface';
+import { ValidRoles } from '../auth/interfaces/valid-roles.interface';
 
 @Injectable()
 export class RatingsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getRatedBooks(id: number, paginationDto: PaginationDto) {
+  async getRatedBooks(userId: number, paginationDto: PaginationDto, authUser: AuthUser) {
+    const { take = 10, skip = 0 } = paginationDto;
+
+    if (authUser.role !== ValidRoles.admin && authUser.id !== userId) {
+      throw new ForbiddenException('You can only see your own rated books');
+    }
+
     try {
-      const { take = 10, skip = 0 } = paginationDto;
       const [ratedBooks, total] = await this.prisma.$transaction([
         this.prisma.ratingUserBook.findMany({
           where: {
-            userId: id
+            userId
           },
           select: {
             book: true,
@@ -28,7 +40,7 @@ export class RatingsService {
         }),
         this.prisma.ratingUserBook.count({
           where: {
-            userId: id
+            userId
           }
         })
       ]);
@@ -46,12 +58,17 @@ export class RatingsService {
     }
   }
 
-  async getNotRatedBooks(id: number, paginationDto: PaginationDto) {
+  async getNotRatedBooks(userId: number, paginationDto: PaginationDto, authUser: AuthUser) {
+    const { take = 10, skip = 0 } = paginationDto;
+
+    if (authUser.role !== ValidRoles.admin && authUser.id !== userId) {
+      throw new ForbiddenException('You can only see your own books without rating');
+    }
+
     try {
-      const { take = 10, skip = 0 } = paginationDto;
       const orders = await this.prisma.order.findMany({
         where: {
-          userId: id,
+          userId,
           status: 'COMPLETED'
         },
         select: {
@@ -70,7 +87,7 @@ export class RatingsService {
           book: {
             ratings: {
               none: {
-                userId: id
+                userId
               }
             }
           }
@@ -107,13 +124,17 @@ export class RatingsService {
     }
   }
 
-  async rateBook(id: number, rateBookDto: RateBookDto) {
+  async rateBook(userId: number, rateBookDto: RateBookDto, authUser: AuthUser) {
     const { bookId, rating } = rateBookDto;
+
+    if (authUser.role !== ValidRoles.admin && authUser.id !== userId) {
+      throw new ForbiddenException('You can only rate your own books');
+    }
 
     // Check if the book exists in one of the orders of the user
     const orders = await this.prisma.order.findMany({
       where: {
-        userId: id,
+        userId,
         status: 'COMPLETED'
       },
       select: {
@@ -146,7 +167,7 @@ export class RatingsService {
       const ratedBook = await this.prisma.ratingUserBook.upsert({
         where: {
           userId_bookId: {
-            userId: id,
+            userId,
             bookId
           }
         },
@@ -162,7 +183,7 @@ export class RatingsService {
           },
           user: {
             connect: {
-              id
+              id: userId
             }
           }
         },
