@@ -11,16 +11,26 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import { JwtPayload } from './interfaces/jwt-payload.interface';
+import { StripeService } from '../stripe/stripe.service';
 
 @Injectable()
 export class AuthService {
-  constructor(private readonly prisma: PrismaService, private readonly jwtService: JwtService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly jwtService: JwtService,
+    private readonly stripeService: StripeService
+  ) {}
 
   async register(createUserDto: CreateUserDto) {
     try {
       const { password, email, firstName, lastName } = createUserDto;
 
-      const user = await this.prisma.user.create({
+      const createStripeCustomer = this.stripeService.stripe.customers.create({
+        email: email.toLowerCase().trim(),
+        name: `${firstName.trim()} ${lastName.trim()}`
+      });
+
+      const createUser = this.prisma.user.create({
         data: {
           firstName: firstName.trim(),
           lastName: lastName.trim(),
@@ -35,6 +45,7 @@ export class AuthService {
         }
       });
 
+      const [stripeCustomer, user] = await Promise.all([createStripeCustomer, createUser]);
       const { password: _, cart, wishlist, ...userData } = user;
 
       return {
