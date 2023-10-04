@@ -7,6 +7,8 @@ import { JwtPayload } from './interfaces/jwt-payload.interface';
 import { BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import * as bcrypt from 'bcrypt';
+import { StripeService } from '../stripe/stripe.service';
+import { ConfigService } from '@nestjs/config';
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -29,10 +31,24 @@ describe('AuthService', () => {
           ...data,
           id: 1,
           role: 'USER',
-          createdAt: new Date()
+          createdAt: new Date(),
+          cart: { id: 2 },
+          wishlist: { id: 3 }
         };
       }),
       findUnique: jest.fn().mockImplementation(({ where }) => {
+        if (where.hasOwnProperty('id')) {
+          return {
+            ...mockUsers[where.id],
+            id: 1,
+            role: 'USER',
+            createdAt: new Date(),
+            cart: { id: 2 },
+            wishlist: { id: 3 },
+            oauthProvider: 'LOCAL'
+          };
+        }
+
         const user = mockUsers.find((user) => user.email === where.email);
 
         if (!user) {
@@ -40,16 +56,37 @@ describe('AuthService', () => {
         }
 
         return {
+          ...user,
           id: 1,
-          email: user.email,
-          password: user.password
+          role: 'USER',
+          createdAt: new Date(),
+          cart: { id: 2 },
+          wishlist: { id: 3 },
+          oauthProvider: 'LOCAL'
         };
       })
     }
   };
 
   const mockJwtService = {
-    sign: jest.fn().mockImplementation((payload: JwtPayload) => 'token')
+    sign: jest.fn().mockImplementation((payload: JwtPayload) => 'token'),
+    verify: jest.fn().mockImplementation((token: string) => {
+      if (token === 'invalid') {
+        throw new UnauthorizedException('Invalid token');
+      }
+
+      return {
+        id: 0
+      };
+    })
+  };
+
+  const mockStripeService = {
+    stripe: {
+      customers: {
+        create: jest.fn()
+      }
+    }
   };
 
   const mockUserDto: CreateUserDto = {
@@ -71,8 +108,10 @@ describe('AuthService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
+        ConfigService,
         { provide: PrismaService, useValue: mockPrismaService },
-        { provide: JwtService, useValue: mockJwtService }
+        { provide: JwtService, useValue: mockJwtService },
+        { provide: StripeService, useValue: mockStripeService }
       ]
     }).compile();
 
@@ -92,7 +131,8 @@ describe('AuthService', () => {
         email: mockUserDto.email,
         role: expect.any(String),
         createdAt: expect.any(Date),
-        token: expect.any(String)
+        cart: expect.any(Number),
+        wishlist: expect.any(Number)
       });
     });
 
@@ -115,8 +155,17 @@ describe('AuthService', () => {
           password: 'Test1234'
         })
       ).resolves.toEqual({
-        id: expect.any(Number),
-        email: mockUserDto.email,
+        user: {
+          id: expect.any(Number),
+          email: mockUserDto.email,
+          firstName: mockUserDto.firstName,
+          lastName: mockUserDto.lastName,
+          role: expect.any(String),
+          createdAt: expect.any(Date),
+          cart: expect.any(Number),
+          wishlist: expect.any(Number),
+          oauthProvider: expect.any(String)
+        },
         token: expect.any(String)
       });
     });
@@ -137,6 +186,33 @@ describe('AuthService', () => {
           password: 'Invalid1234'
         })
       ).rejects.toThrowError(UnauthorizedException);
+    });
+  });
+
+  describe('refreshToken', () => {
+    it('should return a user and generate a jwt token', async () => {
+      for (const user of mockUsers) {
+        user.password = await bcrypt.hash('Test1234', 10);
+      }
+
+      await expect(service.refreshToken('Bearer token')).resolves.toEqual({
+        user: {
+          id: expect.any(Number),
+          email: mockUserDto.email,
+          firstName: mockUserDto.firstName,
+          lastName: mockUserDto.lastName,
+          role: expect.any(String),
+          createdAt: expect.any(Date),
+          cart: expect.any(Number),
+          wishlist: expect.any(Number),
+          oauthProvider: expect.any(String)
+        },
+        token: expect.any(String)
+      });
+    });
+
+    it('should throw an error if the token is invalid', async () => {
+      await expect(service.refreshToken('invalid')).rejects.toThrowError(UnauthorizedException);
     });
   });
 });

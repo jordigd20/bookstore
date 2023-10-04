@@ -11,19 +11,19 @@ datasource db {
 }
 
 model User {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique
-  firstName String
-  lastName  String
-  password  String
-  role      Role     @default(USER)
-  createdAt DateTime @default(now())
-
-  addresses Address[]
-  wishlist  Wishlist?
-  cart      Cart?
-  orders    Order[]
-  ratings   RatingUserBook[]
+  id            Int              @id @default(autoincrement())
+  email         String           @unique
+  firstName     String
+  lastName      String
+  password      String?
+  oauthProvider OauthProvider    @default(LOCAL)
+  role          Role             @default(USER)
+  createdAt     DateTime         @default(now())
+  addresses     Address[]
+  wishlist      Wishlist?
+  cart          Cart?
+  orders        Order[]
+  ratings       RatingUserBook[]
 }
 
 model Address {
@@ -167,6 +167,11 @@ model OrderBook {
 enum Role {
   ADMIN
   USER
+}
+
+enum OauthProvider {
+  LOCAL
+  GOOGLE
 }
 
 enum OrderStatus {

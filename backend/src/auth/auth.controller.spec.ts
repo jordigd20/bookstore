@@ -20,8 +20,7 @@ describe('AuthController', () => {
         ...rest,
         id: 1,
         role: 'USER',
-        createdAt: new Date(),
-        token: 'token'
+        createdAt: new Date()
       };
     }),
     login: jest.fn().mockImplementation((dto: LoginUserDto) => {
@@ -35,11 +34,33 @@ describe('AuthController', () => {
         throw new UnauthorizedException('Invalid credentials');
       }
 
-      const { email } = user;
+      delete user.password;
       return {
-        id: 1,
-        email,
+        user: {
+          ...user,
+          id: 1,
+          role: 'USER',
+          createdAt: new Date()
+        },
         token: 'token'
+      };
+    }),
+    refreshToken: jest.fn().mockImplementation((token: string) => {
+      const user = mockUsers[0];
+
+      if (token === 'invalid') {
+        throw new UnauthorizedException('Invalid token');
+      }
+
+      delete user.password;
+      return {
+        user: {
+          ...user,
+          id: 1,
+          role: 'USER',
+          createdAt: new Date()
+        },
+        token: 'newtoken'
       };
     })
   };
@@ -80,8 +101,7 @@ describe('AuthController', () => {
         lastName: mockUserDto.lastName,
         email: mockUserDto.email,
         role: expect.any(String),
-        createdAt: expect.any(Date),
-        token: expect.any(String)
+        createdAt: expect.any(Date)
       });
     });
 
@@ -94,23 +114,54 @@ describe('AuthController', () => {
 
   describe('login', () => {
     it('should return a user and generate a jwt token', () => {
-      expect(controller.login(mockUserDto)).toEqual({
-        id: expect.any(Number),
-        email: mockUserDto.email,
+      const { email, password } = mockUserDto;
+      expect(controller.login({ email, password })).toEqual({
+        user: {
+          id: expect.any(Number),
+          firstName: mockUserDto.firstName,
+          lastName: mockUserDto.lastName,
+          email: mockUserDto.email,
+          role: expect.any(String),
+          createdAt: expect.any(Date)
+        },
         token: expect.any(String)
       });
     });
 
     it('should throw an error if email was not found', () => {
-      expect(() => controller.login({ ...mockUserDto, email: 'notfound@email.com' })).toThrowError(
+      const { password } = mockUserDto;
+      expect(() => controller.login({ email: 'notfound@email.com', password })).toThrowError(
         UnauthorizedException
       );
     });
 
     it('should throw an error if password is not valid', () => {
-      expect(() => controller.login({ ...mockUserDto, password: 'Invalid1234' })).toThrowError(
+      const { email } = mockUserDto;
+      expect(() => controller.login({ email, password: 'Invalid1234' })).toThrowError(
         UnauthorizedException
       );
+    });
+  });
+
+  describe('refreshToken', () => {
+    it('should return a user and generate a jwt token', () => {
+      expect(controller.refreshToken('token')).toEqual({
+        user: {
+          id: expect.any(Number),
+          firstName: mockUserDto.firstName,
+          lastName: mockUserDto.lastName,
+          email: mockUserDto.email,
+          role: expect.any(String),
+          createdAt: expect.any(Date)
+        },
+        token: expect.any(String)
+      });
+      expect(mockAuthService.refreshToken).toHaveBeenCalled();
+    });
+
+    it('should throw an error if token is invalid', () => {
+      expect(() => controller.refreshToken('invalid')).toThrowError(UnauthorizedException);
+      expect(mockAuthService.refreshToken).toHaveBeenCalled();
     });
   });
 });

@@ -7,6 +7,7 @@ async function main() {
   // await prisma.wishlistBook.deleteMany();
   // await prisma.wishlist.deleteMany();
   // await prisma.address.deleteMany();
+  // await prisma.ratingUserBook.deleteMany();
   // await prisma.cartBook.deleteMany();
   // await prisma.cart.deleteMany();
   // await prisma.orderBook.deleteMany();
