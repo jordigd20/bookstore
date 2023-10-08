@@ -13,6 +13,8 @@ import {
 import { AuthEntity } from './entities/auth.entity';
 import { GoogleSigninDto } from './dto/google-signin.dto';
 import { UserEntity } from '../users/entities/user.entity';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ForgotPasswordEntity } from './entities/forgot-password.entity';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -47,5 +49,12 @@ export class AuthController {
   @ApiUnauthorizedResponse({ description: 'Invalid credentials' })
   googleSignin(@Body() googleDto: GoogleSigninDto) {
     return this.authService.googleSignin(googleDto);
+  }
+
+  @Post('forgot-password')
+  @ApiOkResponse({ type: ForgotPasswordEntity, description: 'Forgot password email sent' })
+  @ApiBadRequestResponse({ description: 'Invalid data provided' })
+  forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto) {
+    return this.authService.forgotPassword(forgotPasswordDto);
   }
 }

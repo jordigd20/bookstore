@@ -9,6 +9,7 @@ import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import * as bcrypt from 'bcrypt';
 import { StripeService } from '../stripe/stripe.service';
 import { ConfigService } from '@nestjs/config';
+import { MailService } from '../mail/mail.service';
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -89,6 +90,8 @@ describe('AuthService', () => {
     }
   };
 
+  const mockMailService = {};
+
   const mockUserDto: CreateUserDto = {
     email: 'test@email.com',
     password: 'Test1234',
@@ -111,7 +114,8 @@ describe('AuthService', () => {
         ConfigService,
         { provide: PrismaService, useValue: mockPrismaService },
         { provide: JwtService, useValue: mockJwtService },
-        { provide: StripeService, useValue: mockStripeService }
+        { provide: StripeService, useValue: mockStripeService },
+        { provide: MailService, useValue: mockMailService }
       ]
     }).compile();
 

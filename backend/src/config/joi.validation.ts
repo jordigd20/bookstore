@@ -11,4 +11,9 @@ export const JoiValidationSchema = Joi.object({
   STRIPE_API_KEY: Joi.string().required(),
   GOOGLE_CLIENT_ID: Joi.string().required(),
   GOOGLE_CLIENT_SECRET: Joi.string().required(),
+  MAIL_HOST: Joi.string().required(),
+  MAIL_PORT: Joi.number().required(),
+  MAIL_USER: Joi.string().email().required(),
+  MAIL_PASSWORD: Joi.string().required(),
+  FRONTEND_URL: Joi.string().required(),
 });

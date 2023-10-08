@@ -7,6 +7,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { StripeModule } from '../stripe/stripe.module';
+import { MailModule } from '../mail/mail.module';
 
 @Module({
   controllers: [AuthController],
@@ -29,7 +30,8 @@ import { StripeModule } from '../stripe/stripe.module';
           apiVersion: '2023-08-16'
         }
       })
-    })
+    }),
+    MailModule
   ],
   exports: [JwtStrategy, PassportModule, JwtModule]
 })

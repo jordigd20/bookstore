@@ -15,6 +15,8 @@ import { StripeService } from '../stripe/stripe.service';
 import { GoogleSigninDto } from './dto/google-signin.dto';
 import { OAuth2Client } from 'google-auth-library';
 import { ConfigService } from '@nestjs/config';
+import { MailService } from '../mail/mail.service';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
 
 @Injectable()
 export class AuthService {
@@ -22,7 +24,8 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     private readonly stripeService: StripeService,
-    private readonly configService: ConfigService
+    private readonly configService: ConfigService,
+    private readonly mailService: MailService
   ) {}
 
   async register(createUserDto: CreateUserDto) {
@@ -188,6 +191,48 @@ export class AuthService {
         cart: user.cart.id
       },
       token: this.getJwtToken({ id: user.id })
+    };
+  }
+
+  async forgotPassword(forgotPasswordDto: ForgotPasswordDto) {
+    const { email } = forgotPasswordDto;
+
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+      select: {
+        id: true,
+        email: true,
+        oauthProvider: true,
+        firstName: true
+      }
+    });
+
+    if (!user) {
+      throw new BadRequestException('Could not find your account');
+    }
+
+    if (user.oauthProvider !== 'LOCAL') {
+      throw new BadRequestException('This method is not valid for this account');
+    }
+
+    const token = this.jwtService.sign({ id: user.id }, { expiresIn: '15m' });
+    const frontendUrl = this.configService.get('FRONTEND_URL');
+    const url = `${frontendUrl}/reset-password?token=${token}`;
+
+    const mail = await this.mailService.sendForgotPassword({
+      email,
+      name: user.firstName,
+      url,
+      frontendUrl
+    });
+
+    if (mail.rejected.length > 0) {
+      throw new InternalServerErrorException('Could not send email');
+    }
+
+    return {
+      message: 'Email sent',
+      ok: true
     };
   }
 
