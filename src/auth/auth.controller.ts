@@ -4,6 +4,7 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { LoginUserDto } from './dto/login-user.dto';
 import {
   ApiBadRequestResponse,
+  ApiBearerAuth,
   ApiCreatedResponse,
   ApiOkResponse,
   ApiResponse,
@@ -14,7 +15,11 @@ import { AuthEntity } from './entities/auth.entity';
 import { GoogleSigninDto } from './dto/google-signin.dto';
 import { UserEntity } from '../users/entities/user.entity';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
-import { ForgotPasswordEntity } from './entities/forgot-password.entity';
+import { SuccessfullEntity } from './entities/successfull.entity';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+import { Auth } from './decorators/auth.decorator';
+import { AuthUser } from './interfaces/auth-user.interface';
+import { GetUser } from './decorators/get-user.decorator';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -52,9 +57,19 @@ export class AuthController {
   }
 
   @Post('forgot-password')
-  @ApiOkResponse({ type: ForgotPasswordEntity, description: 'Forgot password email sent' })
+  @ApiOkResponse({ type: SuccessfullEntity, description: 'Forgot password email sent succesfully' })
   @ApiBadRequestResponse({ description: 'Invalid data provided' })
   forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto) {
     return this.authService.forgotPassword(forgotPasswordDto);
+  }
+
+  @Post('reset-password')
+  @Auth('reset-password')
+  @ApiBearerAuth()
+  @ApiOkResponse({ type: SuccessfullEntity, description: 'Password reset successfully' })
+  @ApiBadRequestResponse({ description: 'Invalid data provided' })
+  @ApiUnauthorizedResponse({ description: 'Invalid or expired token' })
+  resetPassword(@Body() resetPasswordDto: ResetPasswordDto, @GetUser() authUser: AuthUser) {
+    return this.authService.resetPassword(resetPasswordDto, authUser);
   }
 }

@@ -40,7 +40,7 @@ export class UsersController {
 
   @ApiOkResponse({ type: UserEntity, isArray: true })
   @ApiForbiddenResponse({ description: 'Forbidden' })
-  @Auth(ValidRoles.admin)
+  @Auth('jwt', ValidRoles.admin)
   @Get()
   findAll(@Query() paginationDto: PaginationDto) {
     return this.usersService.findAll(paginationDto);

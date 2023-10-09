@@ -48,7 +48,7 @@ export class AddressesController {
 
   @ApiOkResponse({ type: [AddressEntity] })
   @ApiForbiddenResponse({ description: 'Forbidden' })
-  @Auth(ValidRoles.admin)
+  @Auth('jwt', ValidRoles.admin)
   @Get()
   findAll(@Query() paginationDto: PaginationDto) {
     return this.addressesService.findAll(paginationDto);

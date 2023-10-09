@@ -8,10 +8,11 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { StripeModule } from '../stripe/stripe.module';
 import { MailModule } from '../mail/mail.module';
+import { ResetPasswordStrategy } from './strategies/jwt-reset-password.strategy';
 
 @Module({
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
+  providers: [AuthService, JwtStrategy, ResetPasswordStrategy],
   imports: [
     PrismaModule,
     ConfigModule,

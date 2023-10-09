@@ -17,6 +17,8 @@ import { OAuth2Client } from 'google-auth-library';
 import { ConfigService } from '@nestjs/config';
 import { MailService } from '../mail/mail.service';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+import { AuthUser } from './interfaces/auth-user.interface';
 
 @Injectable()
 export class AuthService {
@@ -215,7 +217,13 @@ export class AuthService {
       throw new BadRequestException('This method is not valid for this account');
     }
 
-    const token = this.jwtService.sign({ id: user.id }, { expiresIn: '15m' });
+    const token = this.jwtService.sign(
+      { id: user.id },
+      {
+        secret: this.configService.get('JWT_PASSWORD_SECRET'),
+        expiresIn: '10m'
+      }
+    );
     const frontendUrl = this.configService.get('FRONTEND_URL');
     const url = `${frontendUrl}/reset-password?token=${token}`;
 
@@ -231,9 +239,27 @@ export class AuthService {
     }
 
     return {
-      message: 'Email sent',
+      message: 'Email sent successfully',
       ok: true
     };
+  }
+
+  async resetPassword(resetPasswordDto: ResetPasswordDto, authUser: AuthUser) {
+    try {
+      await this.prisma.user.update({
+        where: { id: authUser.id },
+        data: {
+          password: bcrypt.hashSync(resetPasswordDto.password, 10)
+        }
+      });
+
+      return {
+        message: 'Your password has been updated successfully',
+        ok: true
+      };
+    } catch (error) {
+      this.handleDBError(error);
+    }
   }
 
   private getJwtToken(payload: JwtPayload) {

@@ -41,7 +41,7 @@ export class BooksController {
   @ApiCreatedResponse({ type: BookEntity })
   @ApiBadRequestResponse({ description: 'Invalid data provided' })
   @ApiForbiddenResponse({ description: 'Forbidden' })
-  @Auth(ValidRoles.admin)
+  @Auth('jwt', ValidRoles.admin)
   @Post()
   create(@Body() createBookDto: CreateBookDto) {
     return this.booksService.create(createBookDto);
@@ -63,7 +63,7 @@ export class BooksController {
   @ApiCreatedResponse({ type: CategoryEntity })
   @ApiBadRequestResponse({ description: 'Invalid data provided' })
   @ApiForbiddenResponse({ description: 'Forbidden' })
-  @Auth(ValidRoles.admin)
+  @Auth('jwt', ValidRoles.admin)
   @Post('categories')
   createCategory(@Body() createCategoryDto: CreateCategoryDto) {
     return this.booksService.createCategory(createCategoryDto);
@@ -72,7 +72,7 @@ export class BooksController {
   @ApiOkResponse({ type: CategoryEntity })
   @ApiBadRequestResponse({ description: 'Invalid data provided' })
   @ApiForbiddenResponse({ description: 'Forbidden' })
-  @Auth(ValidRoles.admin)
+  @Auth('jwt', ValidRoles.admin)
   @Patch('categories/:id')
   updateCategory(
     @Param('id', ParseIntPipe) id: number,
@@ -91,7 +91,7 @@ export class BooksController {
   @ApiOkResponse({ type: BookEntity })
   @ApiBadRequestResponse({ description: 'Invalid data provided' })
   @ApiForbiddenResponse({ description: 'Forbidden' })
-  @Auth(ValidRoles.admin)
+  @Auth('jwt', ValidRoles.admin)
   @Patch(':id')
   update(@Param('id', ParseIntPipe) id: number, @Body() updateBookDto: UpdateBookDto) {
     return this.booksService.update(id, updateBookDto);
@@ -100,7 +100,7 @@ export class BooksController {
   @ApiOkResponse({ description: 'Address deleted successfully' })
   @ApiBadRequestResponse({ description: 'Invalid data provided' })
   @ApiForbiddenResponse({ description: 'Forbidden' })
-  @Auth(ValidRoles.admin)
+  @Auth('jwt', ValidRoles.admin)
   @Delete(':id')
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.booksService.remove(id);
