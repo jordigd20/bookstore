@@ -32,8 +32,6 @@ import { FindAllBooksEntity } from './entities/find-all-books.entity';
 import { ValidRoles } from '../auth/interfaces/valid-roles.interface';
 
 @ApiTags('books')
-@Auth()
-@ApiBearerAuth()
 @Controller('books')
 export class BooksController {
   constructor(private readonly booksService: BooksService) {}
@@ -41,6 +39,7 @@ export class BooksController {
   @ApiCreatedResponse({ type: BookEntity })
   @ApiBadRequestResponse({ description: 'Invalid data provided' })
   @ApiForbiddenResponse({ description: 'Forbidden' })
+  @ApiBearerAuth()
   @Auth('jwt', ValidRoles.admin)
   @Post()
   create(@Body() createBookDto: CreateBookDto) {
@@ -63,6 +62,7 @@ export class BooksController {
   @ApiCreatedResponse({ type: CategoryEntity })
   @ApiBadRequestResponse({ description: 'Invalid data provided' })
   @ApiForbiddenResponse({ description: 'Forbidden' })
+  @ApiBearerAuth()
   @Auth('jwt', ValidRoles.admin)
   @Post('categories')
   createCategory(@Body() createCategoryDto: CreateCategoryDto) {
@@ -91,6 +91,7 @@ export class BooksController {
   @ApiOkResponse({ type: BookEntity })
   @ApiBadRequestResponse({ description: 'Invalid data provided' })
   @ApiForbiddenResponse({ description: 'Forbidden' })
+  @ApiBearerAuth()
   @Auth('jwt', ValidRoles.admin)
   @Patch(':id')
   update(@Param('id', ParseIntPipe) id: number, @Body() updateBookDto: UpdateBookDto) {
@@ -100,6 +101,7 @@ export class BooksController {
   @ApiOkResponse({ description: 'Address deleted successfully' })
   @ApiBadRequestResponse({ description: 'Invalid data provided' })
   @ApiForbiddenResponse({ description: 'Forbidden' })
+  @ApiBearerAuth()
   @Auth('jwt', ValidRoles.admin)
   @Delete(':id')
   remove(@Param('id', ParseIntPipe) id: number) {

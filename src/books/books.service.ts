@@ -200,8 +200,8 @@ export class BooksService {
 
     return {
       ...bookFound,
-      averageRating: ratingBook[0]._avg.rating,
-      ratingsCount: ratingBook[0]._count.rating
+      averageRating: ratingBook[0]?._avg?.rating ?? 0,
+      ratingsCount: ratingBook[0]?._count?.rating ?? 0
     };
   }
 
