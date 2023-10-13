@@ -19,10 +19,12 @@ export class CreateUserDto {
   @ApiProperty()
   @IsString()
   @MinLength(1)
+  @MaxLength(25)
   firstName: string;
 
   @ApiProperty()
   @IsString()
   @MinLength(1)
+  @MaxLength(50)
   lastName: string;
 }
