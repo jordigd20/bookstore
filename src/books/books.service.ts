@@ -43,9 +43,9 @@ export class BooksService {
   }
 
   async findAll(searchBookDto: SearchBookDto) {
-    const { skip = 0, take = 10, category, sort, price, filter, search } = searchBookDto;
+    const { skip = 0, take = 10, category, orderBy, price, filter, search } = searchBookDto;
     const where = {};
-    let orderBy = 'AVG(rub."rating") ASC';
+    let orderByQuery = 'AVG(rub."rating") DESC';
 
     if (category) {
       where['categories'] = `c."slug" = '${category}'`;
@@ -81,8 +81,8 @@ export class BooksService {
       where['search'] = `(b."title" ILIKE '%${search}%' OR b."author" ILIKE '%${search}%')`;
     }
 
-    if (sort) {
-      const [sortField, sortDirection] = sort.split('.');
+    if (orderBy) {
+      const [sortField, sortDirection] = orderBy.split('.');
       const validSortDirections = ['asc', 'desc'];
 
       if (!validSortDirections.includes(sortDirection)) {
@@ -102,7 +102,7 @@ export class BooksService {
         );
       }
 
-      orderBy = `${orderByFields[sortField]} ${sortDirection.toUpperCase()}`;
+      orderByQuery = `${orderByFields[sortField]} ${sortDirection.toUpperCase()}`;
     }
 
     try {
@@ -125,7 +125,7 @@ export class BooksService {
           GROUP BY
             b.id
           ORDER BY
-            ${orderBy}
+            ${orderByQuery} NULLS LAST
           LIMIT
             ${take}
           OFFSET

@@ -32,7 +32,7 @@ export class SearchBookDto {
   })
   @IsOptional()
   @IsString()
-  sort?: string;
+  orderBy?: string;
 
   @ApiPropertyOptional({
     default: '',
