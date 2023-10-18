@@ -3,6 +3,7 @@ import { CartsController } from './carts.controller';
 import { CartsService } from './carts.service';
 import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { AuthUser } from 'src/auth/interfaces/auth-user.interface';
+import { CreateBookDto } from '../books/dto/create-book.dto';
 
 describe('CartsController', () => {
   let controller: CartsController;
@@ -18,6 +19,22 @@ describe('CartsController', () => {
     }
   };
 
+  const mockBook: CreateBookDto = {
+    ISBN: '1234567890123',
+    title: 'title of the book',
+    description: 'description',
+    author: 'author',
+    publisher: 'publisher',
+    publishedDate: new Date(),
+    pageCount: 1,
+    imageLink: 'imageLink',
+    language: 'ES',
+    currentPrice: 9.99,
+    originalPrice: 9.99,
+    discount: 0,
+    categories: ['fiction-literature']
+  };
+
   const mockCartsService = {
     addBookToCart: jest.fn().mockImplementation((id, addBookToCartDto, authUser: AuthUser) => {
       if (id === 0) {
@@ -30,10 +47,15 @@ describe('CartsController', () => {
 
       return [
         {
-          ...addBookToCartDto.books[0],
-          cartId: 1,
-          createdAt: new Date(),
-          updatedAt: new Date()
+          total: mockBook.currentPrice.toString(),
+          cart: [
+            {
+              quantity: addBookToCartDto.books[0].quantity,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+              book: mockBook
+            }
+          ]
         }
       ];
     }),
@@ -45,18 +67,15 @@ describe('CartsController', () => {
       if (id !== authUser.cart.id) {
         throw new ForbiddenException('You can only get your own cart');
       }
+
       return {
-        id,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        userId: 2,
-        books: [
+        total: mockBook.currentPrice.toString(),
+        cart: [
           {
             quantity: 1,
             createdAt: new Date(),
             updatedAt: new Date(),
-            cartId: id,
-            bookId: 8
+            book: mockBook
           }
         ]
       };
@@ -71,11 +90,15 @@ describe('CartsController', () => {
       }
 
       return {
-        ...updateCartDto,
-        cartId: id,
-        bookId,
-        createdAt: new Date(),
-        updatedAt: new Date()
+        total: mockBook.currentPrice.toString(),
+        cart: [
+          {
+            quantity: updateCartDto.quantity,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            book: mockBook
+          }
+        ]
       };
     }),
     removeBook: jest.fn().mockImplementation((id, bookId, authUser: AuthUser) => {
@@ -88,8 +111,15 @@ describe('CartsController', () => {
       }
 
       return {
-        message: 'Book removed successfully',
-        statusCode: 200
+        total: mockBook.currentPrice.toString(),
+        cart: [
+          {
+            quantity: 1,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            book: mockBook
+          }
+        ]
       };
     })
   };
@@ -126,11 +156,15 @@ describe('CartsController', () => {
     it('should add a book to the cart', () => {
       expect(controller.addBookToCart(1, mockAddBookToCartDto, mockAuthUser)).toEqual([
         {
-          quantity: 1,
-          createdAt: expect.any(Date),
-          updatedAt: expect.any(Date),
-          cartId: 1,
-          bookId: 8
+          total: mockBook.currentPrice.toString(),
+          cart: [
+            {
+              quantity: mockAddBookToCartDto.books[0].quantity,
+              createdAt: expect.any(Date),
+              updatedAt: expect.any(Date),
+              book: mockBook
+            }
+          ]
         }
       ]);
       expect(mockCartsService.addBookToCart).toHaveBeenCalledWith(
@@ -172,17 +206,13 @@ describe('CartsController', () => {
   describe('findOne', () => {
     it('should return a cart', () => {
       expect(controller.findOne(1, mockAuthUser)).toEqual({
-        id: 1,
-        createdAt: expect.any(Date),
-        updatedAt: expect.any(Date),
-        userId: 2,
-        books: [
+        total: mockBook.currentPrice.toString(),
+        cart: [
           {
             quantity: 1,
             createdAt: expect.any(Date),
             updatedAt: expect.any(Date),
-            cartId: 1,
-            bookId: 8
+            book: mockBook
           }
         ]
       });
@@ -219,11 +249,15 @@ describe('CartsController', () => {
 
     it('should update a book in the cart', () => {
       expect(controller.updateBook(1, 8, mockUpdateCartDto, mockAuthUser)).toEqual({
-        quantity: 2,
-        createdAt: expect.any(Date),
-        updatedAt: expect.any(Date),
-        cartId: 1,
-        bookId: 8
+        total: mockBook.currentPrice.toString(),
+        cart: [
+          {
+            quantity: mockUpdateCartDto.quantity,
+            createdAt: expect.any(Date),
+            updatedAt: expect.any(Date),
+            book: mockBook
+          }
+        ]
       });
       expect(mockCartsService.updateBook).toHaveBeenCalledWith(
         1,
@@ -266,8 +300,15 @@ describe('CartsController', () => {
   describe('removeBook', () => {
     it('should remove a book from the cart', () => {
       expect(controller.removeBook(1, 8, mockAuthUser)).toEqual({
-        message: 'Book removed successfully',
-        statusCode: 200
+        total: mockBook.currentPrice.toString(),
+        cart: [
+          {
+            quantity: 1,
+            createdAt: expect.any(Date),
+            updatedAt: expect.any(Date),
+            book: mockBook
+          }
+        ]
       });
       expect(mockCartsService.removeBook).toHaveBeenCalledWith(1, 8, mockAuthUser);
     });

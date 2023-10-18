@@ -32,11 +32,28 @@ export class CartsService {
           }
         },
         select: {
-          books: true
+          books: {
+            select: {
+              quantity: true,
+              createdAt: true,
+              updatedAt: true,
+              book: true
+            },
+            orderBy: {
+              createdAt: 'desc'
+            }
+          }
         }
       });
 
-      return cart.books;
+      const total = cart.books.reduce((acc, curr) => {
+        return acc + curr.quantity * Number(curr.book.currentPrice);
+      }, 0);
+
+      return {
+        total: total.toString(),
+        cart: cart.books
+      };
     } catch (error) {
       this.handleDBError(error);
     }
@@ -49,8 +66,18 @@ export class CartsService {
 
     const cart = await this.prisma.cart.findUnique({
       where: { id },
-      include: {
-        books: true
+      select: {
+        books: {
+          select: {
+            quantity: true,
+            createdAt: true,
+            updatedAt: true,
+            book: true
+          },
+          orderBy: {
+            createdAt: 'desc'
+          }
+        }
       }
     });
 
@@ -58,7 +85,16 @@ export class CartsService {
       throw new NotFoundException(`Cart with id: ${id} not found`);
     }
 
-    return cart;
+    const total = cart.books.reduce((acc, curr) => {
+      return acc + curr.quantity * +curr.book.currentPrice;
+    }, 0);
+
+    console.log(total);
+
+    return {
+      total: total.toString(),
+      cart: cart.books
+    };
   }
 
   async updateBook(id: number, bookId: number, updateCartDto: UpdateCartDto, authUser: AuthUser) {
@@ -67,19 +103,43 @@ export class CartsService {
     }
 
     try {
-      const cartBook = await this.prisma.cartBook.update({
-        where: {
-          cartId_bookId: {
-            cartId: id,
-            bookId
+      const cart = await this.prisma.cart.update({
+        where: { id },
+        data: {
+          books: {
+            updateMany: {
+              where: {
+                bookId
+              },
+              data: {
+                quantity: updateCartDto.quantity
+              }
+            }
           }
         },
-        data: {
-          quantity: updateCartDto.quantity
+        select: {
+          books: {
+            select: {
+              quantity: true,
+              createdAt: true,
+              updatedAt: true,
+              book: true
+            },
+            orderBy: {
+              createdAt: 'desc'
+            }
+          }
         }
       });
 
-      return cartBook;
+      const total = cart.books.reduce((acc, curr) => {
+        return acc + curr.quantity * +curr.book.currentPrice;
+      }, 0);
+
+      return {
+        total: total.toString(),
+        cart: cart.books
+      };
     } catch (error) {
       this.handleDBError(error);
     }
@@ -91,18 +151,37 @@ export class CartsService {
     }
 
     try {
-      await this.prisma.cartBook.delete({
-        where: {
-          cartId_bookId: {
-            cartId: id,
-            bookId
+      const cart = await this.prisma.cart.update({
+        where: { id },
+        data: {
+          books: {
+            deleteMany: {
+              bookId
+            }
+          }
+        },
+        select: {
+          books: {
+            select: {
+              quantity: true,
+              createdAt: true,
+              updatedAt: true,
+              book: true
+            },
+            orderBy: {
+              createdAt: 'desc'
+            }
           }
         }
       });
 
+      const total = cart.books.reduce((acc, curr) => {
+        return acc + curr.quantity * +curr.book.currentPrice;
+      }, 0);
+
       return {
-        message: 'Book removed successfully',
-        statusCode: 200
+        total: total.toString(),
+        cart: cart.books
       };
     } catch (error) {
       this.handleDBError(error);

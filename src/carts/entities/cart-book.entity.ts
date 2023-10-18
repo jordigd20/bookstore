@@ -1,16 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { BookEntity } from '../../books/entities/book.entity';
 
 export class CartBookEntity {
-  @ApiProperty({
-    description: 'The id of the cart'
-  })
-  cartId: number;
-
-  @ApiProperty({
-    description: 'The id of the book in the cart'
-  })
-  bookId: number;
-
   @ApiProperty({
     description: 'The quantity of the book in the cart'
   })
@@ -25,4 +16,10 @@ export class CartBookEntity {
     description: 'The date the book was last updated in the cart'
   })
   updatedAt: Date;
+
+  @ApiProperty({
+    description: 'The id of the book in the cart',
+    type: BookEntity
+  })
+  book: BookEntity;
 }

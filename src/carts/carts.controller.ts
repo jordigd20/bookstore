@@ -11,7 +11,6 @@ import {
   ApiTags
 } from '@nestjs/swagger';
 import { Auth } from '../auth/decorators/auth.decorator';
-import { CartBookEntity } from './entities/cart-book.entity';
 import { CartEntity } from './entities/cart.entity';
 import { GetUser } from '../auth/decorators/get-user.decorator';
 import { AuthUser } from '../auth/interfaces/auth-user.interface';
@@ -23,7 +22,7 @@ import { AuthUser } from '../auth/interfaces/auth-user.interface';
 export class CartsController {
   constructor(private readonly cartsService: CartsService) {}
 
-  @ApiCreatedResponse({ type: CartBookEntity, isArray: true })
+  @ApiCreatedResponse({ type: CartEntity })
   @ApiBadRequestResponse({ description: 'Invalid data provided' })
   @ApiForbiddenResponse({ description: 'Forbidden' })
   @Post(':id')
@@ -43,7 +42,7 @@ export class CartsController {
     return this.cartsService.findOne(id, authUser);
   }
 
-  @ApiOkResponse({ type: CartBookEntity })
+  @ApiOkResponse({ type: CartEntity })
   @ApiBadRequestResponse({ description: 'Invalid data provided' })
   @ApiForbiddenResponse({ description: 'Forbidden' })
   @Patch(':id/books/:bookId')
@@ -56,7 +55,7 @@ export class CartsController {
     return this.cartsService.updateBook(id, bookId, updateCartDto, authUser);
   }
 
-  @ApiOkResponse({ description: 'Book removed from the cart successfully' })
+  @ApiOkResponse({ type: CartEntity })
   @ApiBadRequestResponse({ description: 'Invalid data provided' })
   @ApiForbiddenResponse({ description: 'Forbidden' })
   @Delete(':id/books/:bookId')
