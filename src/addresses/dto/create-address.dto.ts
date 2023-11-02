@@ -4,6 +4,7 @@ import {
   IsOptional,
   IsPhoneNumber,
   IsString,
+  MaxLength,
   MinLength,
   Validate
 } from 'class-validator';
@@ -12,12 +13,14 @@ import { IsPostalCodeByCountryCode } from '../decorators/is-postal-code.decorato
 export class CreateAddressDto {
   @ApiProperty()
   @IsString()
-  @MinLength(1)
+  @MinLength(2)
+  @MaxLength(25)
   firstName: string;
 
   @ApiProperty()
   @IsString()
-  @MinLength(1)
+  @MinLength(2)
+  @MaxLength(50)
   lastName: string;
 
   @ApiProperty()
@@ -47,7 +50,7 @@ export class CreateAddressDto {
 
   @ApiProperty()
   @IsString()
-  @Validate(IsPostalCodeByCountryCode)
+  // @Validate(IsPostalCodeByCountryCode)
   postalCode: string;
 
   @ApiProperty()

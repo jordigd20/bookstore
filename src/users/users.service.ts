@@ -14,6 +14,7 @@ import { FindOneUserDto } from './dto/find-one-user.dto';
 import { WishlistBooksDto } from './dto/wishlist-books.dto';
 import { AuthUser } from '../auth/interfaces/auth-user.interface';
 import { ValidRoles } from '../auth/interfaces/valid-roles.interface';
+import { UpdatePasswordDto } from './dto/update-password.dto';
 
 @Injectable()
 export class UsersService {
@@ -76,15 +77,52 @@ export class UsersService {
     return user;
   }
 
-  async update(id: number, updateUserDto: UpdateUserDto, authUser: AuthUser) {
+  async updateProfile(id: number, updateUserDto: UpdateUserDto, authUser: AuthUser) {
     if (authUser.role !== ValidRoles.admin && id !== authUser.id) {
       throw new ForbiddenException('You can only update your own user');
+    }
+
+    try {
+      const { firstName, lastName } = updateUserDto;
+
+      const updatedUser = await this.prisma.user.update({
+        where: { id },
+        data: {
+          firstName: firstName.trim(),
+          lastName: lastName.trim()
+        },
+        include: {
+          cart: true,
+          wishlist: true
+        }
+      });
+
+      const { password: _, ...userData } = updatedUser;
+
+      return {
+        ...userData,
+        wishlist: updatedUser.wishlist.id,
+        cart: updatedUser.cart.id
+      };
+    } catch (error) {
+      this.handleDBError(error);
+    }
+  }
+
+  async updatePassword(id: number, updatePasswordDto: UpdatePasswordDto, authUser: AuthUser) {
+    if (authUser.role !== ValidRoles.admin && id !== authUser.id) {
+      throw new ForbiddenException('You can only update your own user');
+    }
+
+    if (updatePasswordDto.newPassword !== updatePasswordDto.confirmPassword) {
+      throw new BadRequestException('Passwords do not match');
     }
 
     const user = await this.prisma.user.findUnique({
       where: { id },
       select: {
-        password: true
+        password: true,
+        oauthProvider: true
       }
     });
 
@@ -92,25 +130,26 @@ export class UsersService {
       throw new NotFoundException(`User with id: ${id} not found`);
     }
 
-    if (!bcrypt.compareSync(updateUserDto.password, user.password)) {
-      throw new BadRequestException('Invalid password');
+    if (user.oauthProvider !== 'LOCAL') {
+      throw new BadRequestException('This verification strategy is not valid for this account');
+    }
+
+    if (!bcrypt.compareSync(updatePasswordDto.currentPassword, user.password)) {
+      throw new BadRequestException('Invalid credentials');
     }
 
     try {
-      const { password, email, firstName, lastName } = updateUserDto;
-
-      const updatedUser = await this.prisma.user.update({
+      await this.prisma.user.update({
         where: { id },
         data: {
-          email: email.toLowerCase().trim(),
-          firstName: firstName.trim(),
-          lastName: lastName.trim()
+          password: bcrypt.hashSync(updatePasswordDto.newPassword, 10)
         }
       });
 
-      const { password: _, ...userData } = updatedUser;
-
-      return userData;
+      return {
+        message: 'Your password has been updated successfully',
+        ok: true
+      };
     } catch (error) {
       this.handleDBError(error);
     }

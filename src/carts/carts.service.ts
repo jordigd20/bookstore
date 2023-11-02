@@ -89,8 +89,6 @@ export class CartsService {
       return acc + curr.quantity * +curr.book.currentPrice;
     }, 0);
 
-    console.log(total);
-
     return {
       total: total.toString(),
       cart: cart.books

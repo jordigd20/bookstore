@@ -83,7 +83,9 @@ describe('UsersService', () => {
         const user = mockUsers.find((user) => user.id === where.id);
         return {
           ...user,
-          ...data
+          ...data,
+          cart: { id: 2 },
+          wishlist: { id: 3 }
         };
       })
     },
@@ -150,9 +152,7 @@ describe('UsersService', () => {
 
   const mockUpdateUserDto = {
     firstName: 'Jane',
-    lastName: 'Johnson',
-    email: 'test@email.com',
-    password: 'Test1234'
+    lastName: 'Johnson'
   };
 
   const createBookDtoMock: CreateBookDto = {
@@ -260,31 +260,21 @@ describe('UsersService', () => {
         user.password = await bcrypt.hash('Test1234', 10);
       }
 
-      await expect(service.update(1, mockUpdateUserDto, mockAuthUser)).resolves.toEqual({
+      await expect(service.updateProfile(1, mockUpdateUserDto, mockAuthUser)).resolves.toEqual({
         id: 1,
-        email: mockUpdateUserDto.email,
+        email: mockUser.email,
         firstName: mockUpdateUserDto.firstName,
         lastName: mockUpdateUserDto.lastName,
         createdAt: expect.any(Date),
-        role: expect.any(String)
+        role: expect.any(String),
+        cart: expect.any(Number),
+        wishlist: expect.any(Number)
       });
-    });
-
-    it('should throw a NotFoundException if the user is not found', async () => {
-      await expect(
-        service.update(20, mockUpdateUserDto, { ...mockAuthUser, id: 20 })
-      ).rejects.toThrowError(NotFoundException);
-    });
-
-    it('should throw a BadRequestException if the password is not valid', async () => {
-      await expect(
-        service.update(1, { ...mockUpdateUserDto, password: 'test1234' }, mockAuthUser)
-      ).rejects.toThrowError(BadRequestException);
     });
 
     it('should throw a ForbiddenException if the user is not admin and is trying to update another user', async () => {
       await expect(
-        service.update(1, mockUpdateUserDto, { ...mockAuthUser, id: 2 })
+        service.updateProfile(1, mockUpdateUserDto, { ...mockAuthUser, id: 2 })
       ).rejects.toThrowError(ForbiddenException);
     });
   });

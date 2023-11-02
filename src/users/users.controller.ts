@@ -30,6 +30,7 @@ import { WishlistBooksDto } from './dto/wishlist-books.dto';
 import { ValidRoles } from '../auth/interfaces/valid-roles.interface';
 import { GetUser } from '../auth/decorators/get-user.decorator';
 import { AuthUser } from '../auth/interfaces/auth-user.interface';
+import { UpdatePasswordDto } from './dto/update-password.dto';
 
 @ApiTags('users')
 @Auth()
@@ -62,13 +63,26 @@ export class UsersController {
   @ApiBadRequestResponse({ description: 'Invalid data provided' })
   @ApiForbiddenResponse({ description: 'Forbidden' })
   @ApiNotFoundResponse({ description: 'User not found' })
-  @Patch(':id')
-  update(
+  @Patch('/profile/:id')
+  updateProfile(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateUserDto: UpdateUserDto,
     @GetUser() user: AuthUser
   ) {
-    return this.usersService.update(id, updateUserDto, user);
+    return this.usersService.updateProfile(id, updateUserDto, user);
+  }
+
+  @ApiOkResponse({ type: UserEntity })
+  @ApiBadRequestResponse({ description: 'Invalid data provided' })
+  @ApiForbiddenResponse({ description: 'Forbidden' })
+  @ApiNotFoundResponse({ description: 'User not found' })
+  @Patch('/password/:id')
+  updatePassword(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateUserDto: UpdatePasswordDto,
+    @GetUser() user: AuthUser
+  ) {
+    return this.usersService.updatePassword(id, updateUserDto, user);
   }
 
   @ApiOkResponse({ type: BookEntity, isArray: true })

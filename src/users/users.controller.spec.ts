@@ -1,13 +1,15 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { PaginationDto } from '../common/dto/pagination.dto';
 import { CreateUserDto } from '../auth/dto/create-user.dto';
 import { CreateBookDto } from 'src/books/dto/create-book.dto';
 import { WishlistBooksDto } from './dto/wishlist-books.dto';
 import { FindOneUserDto } from './dto/find-one-user.dto';
 import { AuthUser } from '../auth/interfaces/auth-user.interface';
+import { UpdateUserDto } from './dto/update-user.dto';
+import { UpdatePasswordDto } from './dto/update-password.dto';
 
 describe('UsersController', () => {
   let controller: UsersController;
@@ -39,24 +41,35 @@ describe('UsersController', () => {
 
         return result;
       }),
-    update: jest.fn().mockImplementation((id: number, dto: CreateUserDto, authUser: AuthUser) => {
-      const { password, ...data } = dto;
+    updateProfile: jest
+      .fn()
+      .mockImplementation((id: number, dto: UpdateUserDto, authUser: AuthUser) => {
+        if (id !== 1) {
+          throw new NotFoundException(`User with id: ${id} not found`);
+        }
 
-      if (id !== 1) {
-        throw new NotFoundException(`User with id: ${id} not found`);
-      }
+        const { password, ...userData } = mockUserDto;
 
-      if (password === 'invalid') {
-        throw new BadRequestException('Invalid password');
-      }
+        return {
+          ...userData,
+          id,
+          ...dto,
+          role: 'USER',
+          createdAt: new Date()
+        };
+      }),
+    updatePassword: jest
+      .fn()
+      .mockImplementation((id: number, dto: UpdatePasswordDto, authUser: AuthUser) => {
+        if (id !== authUser.id) {
+          throw new ForbiddenException('You can only update your own password');
+        }
 
-      return {
-        id,
-        ...data,
-        role: 'USER',
-        createdAt: new Date()
-      };
-    }),
+        return {
+          message: 'Your password has been updated successfully',
+          ok: true
+        };
+      }),
     getWishlist: jest.fn().mockImplementation((id: number, authUser: AuthUser) => {
       if (id === 0) {
         throw new NotFoundException(`User with id: ${id} not found`);
@@ -226,31 +239,50 @@ describe('UsersController', () => {
 
   describe('update', () => {
     it('should update a user', () => {
-      expect(controller.update(1, mockUserDto, mockAuthUser)).toEqual({
+      expect(
+        controller.updateProfile(
+          1,
+          {
+            firstName: 'new name',
+            lastName: 'new last name'
+          },
+          mockAuthUser
+        )
+      ).toEqual({
         id: expect.any(Number),
         email: mockUserDto.email,
-        firstName: mockUserDto.firstName,
-        lastName: mockUserDto.lastName,
+        firstName: 'new name',
+        lastName: 'new last name',
         role: 'USER',
         createdAt: expect.any(Date)
       });
     });
 
     it('should throw an error when user is not found', () => {
-      expect(() => controller.update(2, mockUserDto, mockAuthUser)).toThrowError(NotFoundException);
+      expect(() => controller.updateProfile(2, mockUserDto, mockAuthUser)).toThrowError(
+        NotFoundException
+      );
+    });
+  });
+
+  describe('updatePassword', () => {
+    const passwordDto = {
+      currentPassword: 'Password1234',
+      newPassword: 'Password12345',
+      confirmPassword: 'Password12345'
+    };
+
+    it('should update the user password', () => {
+      expect(controller.updatePassword(1, passwordDto, mockAuthUser)).toEqual({
+        message: 'Your password has been updated successfully',
+        ok: true
+      });
     });
 
-    it('should throw an error when the password is invalid', () => {
-      expect(() =>
-        controller.update(
-          1,
-          {
-            ...mockUserDto,
-            password: 'invalid'
-          },
-          mockAuthUser
-        )
-      ).toThrowError(BadRequestException);
+    it('should throw a forbidden exception when the user is not the same or is not authenticated', () => {
+      expect(() => controller.updatePassword(0, passwordDto, mockAuthUser)).toThrowError(
+        ForbiddenException
+      );
     });
   });
 
