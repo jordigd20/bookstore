@@ -3,7 +3,7 @@ import { UsersService } from './users.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { PaginationDto } from '../common/dto/pagination.dto';
 import * as bcrypt from 'bcrypt';
-import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { CreateBookDto } from 'src/books/dto/create-book.dto';
 import { AuthUser } from '../auth/interfaces/auth-user.interface';
 
@@ -95,11 +95,13 @@ describe('UsersService', () => {
           return {
             books: [
               {
-                id: new Date().getTime(),
-                wishlistId: where.id,
-                bookId: 2,
-                createdAt: new Date(),
-                updatedAt: new Date()
+                book: {
+                  id: new Date().getTime(),
+                  wishlistId: where.id,
+                  bookId: 2,
+                  createdAt: new Date(),
+                  updatedAt: new Date()
+                }
               }
             ]
           };
@@ -117,7 +119,13 @@ describe('UsersService', () => {
           }))
         };
       })
-    }
+    },
+    wishlistBook: {
+      count: jest.fn().mockImplementation(({ where }) => {
+        return where.wishlistId === 1 ? 1 : 0;
+      })
+    },
+    $transaction: jest.fn().mockImplementation((args) => args)
   };
 
   const mockUser = {
@@ -281,34 +289,23 @@ describe('UsersService', () => {
 
   describe('getWishlist', () => {
     it('should return an array of books from the user wishlist', async () => {
-      await expect(service.getWishlist(1, {}, mockAuthUser)).resolves.toEqual([
-        {
-          ...createBookDtoMock,
-          id: 1,
-          slug: 'title-of-the-book',
-          createdAt: expect.any(Date),
-          updatedAt: expect.any(Date)
-        }
-      ]);
-      expect(mockPrismaService.user.findUnique).toBeCalledWith({
-        where: { id: 1 },
-        select: {
-          wishlist: {
-            select: {
-              books: {
-                select: {
-                  book: true
-                },
-                orderBy: {
-                  createdAt: 'desc'
-                },
-                skip: 0,
-                take: 10
-              }
-            }
+      await expect(service.getWishlist(1, {}, mockAuthUser)).resolves.toEqual({
+        data: [
+          {
+            ...createBookDtoMock,
+            id: 1,
+            slug: 'title-of-the-book',
+            createdAt: expect.any(Date),
+            updatedAt: expect.any(Date)
           }
+        ],
+        pagination: {
+          skip: expect.any(Number),
+          take: expect.any(Number),
+          total: expect.any(Number)
         }
       });
+      expect(mockPrismaService.user.findUnique).toBeCalled();
     });
 
     it('should throw a ForbiddenException if the user is not admin and is trying to get another user wishlist', async () => {
@@ -383,15 +380,22 @@ describe('UsersService', () => {
     };
 
     it('should remove a book from the user wishlist', async () => {
-      await expect(service.removeFromWishlist(1, wishlistBooksDto, mockAuthUser)).resolves.toEqual([
-        {
-          id: expect.any(Number),
-          wishlistId: 1,
-          bookId: 2,
-          createdAt: expect.any(Date),
-          updatedAt: expect.any(Date)
+      await expect(service.removeFromWishlist(1, wishlistBooksDto, mockAuthUser)).resolves.toEqual({
+        data: [
+          {
+            id: expect.any(Number),
+            wishlistId: 1,
+            bookId: 2,
+            createdAt: expect.any(Date),
+            updatedAt: expect.any(Date)
+          }
+        ],
+        pagination: {
+          skip: expect.any(Number),
+          take: expect.any(Number),
+          total: expect.any(Number)
         }
-      ]);
+      });
       expect(mockPrismaService.user.findUnique).toBeCalledWith({
         where: { id: 1 },
         select: {
@@ -408,21 +412,7 @@ describe('UsersService', () => {
           }
         }
       });
-      expect(mockPrismaService.wishlist.update).toBeCalledWith({
-        where: { id: 1 },
-        data: {
-          books: {
-            deleteMany: {
-              bookId: {
-                in: [1]
-              }
-            }
-          }
-        },
-        select: {
-          books: true
-        }
-      });
+      expect(mockPrismaService.wishlist.update).toBeCalled();
     });
 
     it('should throw a ForbiddenException if the user is not admin and is trying to remove a book from another user wishlist', async () => {

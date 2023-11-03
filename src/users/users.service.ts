@@ -169,14 +169,19 @@ export class UsersService {
           select: {
             books: {
               select: {
-                book: true
+                book: {
+                  include: {
+                    categories: true
+                  }
+                }
               },
               orderBy: {
                 createdAt: 'desc'
               },
               skip,
               take
-            }
+            },
+            id: true
           }
         }
       }
@@ -186,7 +191,20 @@ export class UsersService {
       throw new NotFoundException(`User with id: ${id} not found`);
     }
 
-    return wishlistedBooksFromUser.wishlist.books.map((book) => book.book);
+    const total = await this.prisma.wishlistBook.count({
+      where: {
+        wishlistId: wishlistedBooksFromUser.wishlist.id
+      }
+    });
+
+    return {
+      data: wishlistedBooksFromUser.wishlist.books.map((book) => book.book),
+      pagination: {
+        skip,
+        take,
+        total
+      }
+    };
   }
 
   async addToWishlist(id: number, wishlistBooksDto: WishlistBooksDto, authUser: AuthUser) {
@@ -245,7 +263,7 @@ export class UsersService {
   }
 
   async removeFromWishlist(id: number, wishlistBooksDto: WishlistBooksDto, authUser: AuthUser) {
-    const { bookIds: booksToRemove } = wishlistBooksDto;
+    const { bookIds: booksToRemove, take = 10, skip = 0 } = wishlistBooksDto;
 
     if (authUser.role !== ValidRoles.admin && id !== authUser.id) {
       throw new ForbiddenException('You can only remove books from your own wishlist');
@@ -279,7 +297,7 @@ export class UsersService {
     }
 
     try {
-      const wishlistedBooks = await this.prisma.wishlist.update({
+      const wishlistedBooksQuery = this.prisma.wishlist.update({
         where: { id: user.wishlist.id },
         data: {
           books: {
@@ -291,11 +309,42 @@ export class UsersService {
           }
         },
         select: {
-          books: true
+          books: {
+            select: {
+              book: {
+                include: {
+                  categories: true
+                }
+              }
+            },
+            orderBy: {
+              createdAt: 'desc'
+            },
+            skip,
+            take
+          }
         }
       });
 
-      return wishlistedBooks.books;
+      const totalQuery = this.prisma.wishlistBook.count({
+        where: {
+          wishlistId: user.wishlist.id
+        }
+      });
+
+      const [wishlistedBooks, total] = await this.prisma.$transaction([
+        wishlistedBooksQuery,
+        totalQuery
+      ]);
+
+      return {
+        data: wishlistedBooks.books.map((book) => book.book),
+        pagination: {
+          skip,
+          take,
+          total
+        }
+      };
     } catch (error) {
       this.handleDBError(error);
     }
