@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, ParseIntPipe, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseIntPipe, Patch, Post, Query } from '@nestjs/common';
 import { RatingsService } from './ratings.service';
 import {
   ApiBadRequestResponse,
@@ -56,5 +56,17 @@ export class RatingsController {
     @GetUser() authUser: AuthUser
   ) {
     return this.ratingsService.rateBook(userId, rateBookDto, authUser);
+  }
+
+  @ApiOkResponse({ type: RatedBookEntity })
+  @ApiBadRequestResponse({ description: 'Invalid data provided' })
+  @ApiForbiddenResponse({ description: 'Forbidden' })
+  @Patch(':userId/')
+  updateRating(
+    @Param('userId', ParseIntPipe) userId: number,
+    @Body() rateBookDto: RateBookDto,
+    @GetUser() authUser: AuthUser
+  ) {
+    return this.ratingsService.updateRating(userId, rateBookDto, authUser);
   }
 }

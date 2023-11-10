@@ -29,7 +29,11 @@ export class RatingsService {
             userId
           },
           select: {
-            book: true,
+            book: {
+              include: {
+                categories: true
+              }
+            },
             rating: true
           },
           orderBy: {
@@ -77,7 +81,14 @@ export class RatingsService {
       });
 
       if (!orders) {
-        return [];
+        return {
+          data: [],
+          pagination: {
+            skip,
+            take,
+            total: 0
+          }
+        };
       }
 
       const orderIds = orders.map((order) => order.id);
@@ -98,7 +109,11 @@ export class RatingsService {
         this.prisma.orderBook.findMany({
           where,
           select: {
-            book: true
+            book: {
+              include: {
+                categories: true
+              }
+            }
           },
           orderBy: {
             createdAt: 'desc'
@@ -188,12 +203,48 @@ export class RatingsService {
           }
         },
         select: {
-          book: true,
+          book: {
+            include: {
+              categories: true
+            }
+          },
           rating: true
         }
       });
 
       return ratedBook;
+    } catch (error) {
+      this.handleDBError(error);
+    }
+  }
+
+  updateRating(userId: number, rateBookDto: RateBookDto, authUser: AuthUser) {
+    const { bookId, rating } = rateBookDto;
+
+    if (authUser.role !== ValidRoles.admin && authUser.id !== userId) {
+      throw new ForbiddenException('You can only rate your own books');
+    }
+
+    try {
+      return this.prisma.ratingUserBook.update({
+        where: {
+          userId_bookId: {
+            userId,
+            bookId
+          }
+        },
+        data: {
+          rating
+        },
+        select: {
+          book: {
+            include: {
+              categories: true
+            }
+          },
+          rating: true
+        }
+      });
     } catch (error) {
       this.handleDBError(error);
     }
