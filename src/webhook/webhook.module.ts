@@ -6,7 +6,7 @@ import { ConfigService } from '@nestjs/config';
 
 @Module({
   controllers: [WebhookController],
-  providers: [WebhookService],
+  providers: [WebhookService, ConfigService],
   imports: [
     StripeModule.forRootAsync({
       inject: [ConfigService],
