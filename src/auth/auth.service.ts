@@ -224,7 +224,7 @@ export class AuthService {
         expiresIn: '10m'
       }
     );
-    const frontendUrl = this.configService.get('FRONTEND_URL');
+    const frontendUrl = this.configService.get('CLIENT_URL');
     const url = `${frontendUrl}/reset-password?token=${token}`;
 
     const mail = await this.mailService.sendForgotPassword({

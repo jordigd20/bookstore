@@ -8,6 +8,8 @@ import { BooksModule } from './books/books.module';
 import { CartsModule } from './carts/carts.module';
 import { RatingsModule } from './ratings/ratings.module';
 import { MailModule } from './mail/mail.module';
+// import { OrdersModule } from './orders/orders.module';
+import { WebhookModule } from './webhook/webhook.module';
 
 @Module({
   imports: [
@@ -20,7 +22,9 @@ import { MailModule } from './mail/mail.module';
     BooksModule,
     CartsModule,
     RatingsModule,
-    MailModule
+    MailModule,
+    // OrdersModule,
+    WebhookModule
   ],
   controllers: [],
   providers: []
