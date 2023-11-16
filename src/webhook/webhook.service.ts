@@ -1,24 +1,25 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { StripeService } from '../stripe/stripe.service';
 import { ConfigService } from '@nestjs/config';
+import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class WebhookService {
   constructor(
     private readonly configService: ConfigService,
-    private readonly stripeService: StripeService
+    private readonly stripeService: StripeService,
+    private readonly prismaService: PrismaService
   ) {}
 
-  async handleWebhooks(signature: string, body: any) {
+  async handleWebhooks(signature: string, rawBody: any) {
     const endpointSecret = this.configService.get('STRIPE_WEBHOOK_SECRET');
-    console.log(signature);
-    console.log(body);
-
+    console.log({ signature });
+    console.log({ rawBody });
     let event;
 
     try {
       event = await this.stripeService.stripe.webhooks.constructEventAsync(
-        body,
+        rawBody,
         signature,
         endpointSecret
       );
@@ -26,7 +27,7 @@ export class WebhookService {
       throw new BadRequestException(`Webhook error: ${error.message}`);
     }
 
-    console.log(event);
+    console.log({ event });
 
     switch (event.type) {
       case 'payment_intent.succeeded':
@@ -46,7 +47,10 @@ export class WebhookService {
   }
 
   paymentIntentSucceeded(event: any) {
-    // const paymentIntent = event.data.object;
+    console.log({
+      amount: event.data.object.amount,
+      metadata: event.data.object.metadata
+    });
   }
 
   paymentIntentFailed(event: any) {}
