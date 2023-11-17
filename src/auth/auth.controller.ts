@@ -29,7 +29,6 @@ export class AuthController {
   @Post('register')
   @ApiCreatedResponse({ type: UserEntity, description: 'User created' })
   @ApiBadRequestResponse({ description: 'Invalid data provided' })
-  @ApiResponse({ status: 400, description: 'Bad request' })
   register(@Body() createUserDto: CreateUserDto) {
     return this.authService.register(createUserDto);
   }

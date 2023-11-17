@@ -34,12 +34,18 @@ export class AuthService {
     try {
       const { password, email, firstName, lastName } = createUserDto;
 
+      const stripeCustomer = await this.stripeService.stripe.customers.create({
+        email: email.toLowerCase().trim(),
+        name: `${firstName.trim()} ${lastName.trim()}`
+      });
+
       const user = await this.prisma.user.create({
         data: {
           firstName: firstName.trim(),
           lastName: lastName.trim(),
           email: email.toLowerCase().trim(),
           password: bcrypt.hashSync(password, 10),
+          customerId: stripeCustomer.id,
           cart: { create: {} },
           wishlist: { create: {} }
         },
@@ -47,11 +53,6 @@ export class AuthService {
           cart: true,
           wishlist: true
         }
-      });
-
-      await this.stripeService.stripe.customers.create({
-        email: email.toLowerCase().trim(),
-        name: `${firstName.trim()} ${lastName.trim()}`
       });
 
       delete user.password;
@@ -152,17 +153,18 @@ export class AuthService {
     });
 
     if (!user) {
-      const createStripeCustomer = this.stripeService.stripe.customers.create({
+      const stripeCustomer = await this.stripeService.stripe.customers.create({
         email: email.toLowerCase().trim(),
         name: `${given_name} ${family_name}`
       });
 
-      const createUser = this.prisma.user.create({
+      const createdUser = await this.prisma.user.create({
         data: {
           firstName: given_name,
           lastName: family_name,
           email: email,
           oauthProvider: 'GOOGLE',
+          customerId: stripeCustomer.id,
           cart: { create: {} },
           wishlist: { create: {} }
         },
@@ -172,7 +174,7 @@ export class AuthService {
         }
       });
 
-      const [stripeCustomer, createdUser] = await Promise.all([createStripeCustomer, createUser]);
+     
 
       delete createdUser.password;
       return {

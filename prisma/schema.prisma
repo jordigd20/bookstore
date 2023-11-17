@@ -11,19 +11,21 @@ datasource db {
 }
 
 model User {
-  id            Int              @id @default(autoincrement())
-  email         String           @unique
+  id            Int           @id @default(autoincrement())
+  email         String        @unique
   firstName     String
   lastName      String
   password      String?
-  oauthProvider OauthProvider    @default(LOCAL)
-  role          Role             @default(USER)
-  createdAt     DateTime         @default(now())
-  addresses     Address[]
-  wishlist      Wishlist?
-  cart          Cart?
-  orders        Order[]
-  ratings       RatingUserBook[]
+  oauthProvider OauthProvider @default(LOCAL)
+  role          Role          @default(USER)
+  customerId    String        @unique
+  createdAt     DateTime      @default(now())
+
+  addresses Address[]
+  wishlist  Wishlist?
+  cart      Cart?
+  orders    Order[]
+  ratings   RatingUserBook[]
 }
 
 model Address {
@@ -41,7 +43,8 @@ model Address {
   updatedAt   DateTime @updatedAt
 
   userId Int
-  user   User @relation(fields: [userId], references: [id])
+  user   User    @relation(fields: [userId], references: [id])
+  Order  Order[]
 }
 
 model Book {
@@ -145,9 +148,11 @@ model Order {
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
 
-  userId Int
-  user   User        @relation(fields: [userId], references: [id])
-  books  OrderBook[]
+  userId    Int
+  user      User        @relation(fields: [userId], references: [id])
+  addressId Int
+  address   Address     @relation(fields: [addressId], references: [id])
+  books     OrderBook[]
 }
 
 model OrderBook {

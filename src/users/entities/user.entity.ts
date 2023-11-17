@@ -36,6 +36,13 @@ export class UserEntity implements User {
   oauthProvider: OauthProvider;
 
   @ApiProperty({
+    description: 'The customer id of the user',
+    example: 'cus_P00403rkCx3P8D',
+    required: true
+  })
+  customerId: string;
+
+  @ApiProperty({
     description: 'The password of the user',
     example: 'Test1234',
     writeOnly: true

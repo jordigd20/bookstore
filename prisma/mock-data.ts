@@ -7,6 +7,7 @@ export interface MockUser {
   lastName: string;
   password: string;
   role: Role;
+  customerId: string;
   addresses?: { create: any } | { createMany: any };
   wishlist?: string[];
   cart?: string[];
@@ -1798,6 +1799,7 @@ export const users: MockUser[] = [
     lastName: 'Doe',
     password: bcrypt.hashSync('Test1234', 10),
     role: 'USER' as Role,
+    customerId: 'cus_P1Uc41jGrwPaUY',
     addresses: {
       createMany: {
         data: [
@@ -2035,6 +2037,7 @@ export const users: MockUser[] = [
     lastName: 'Doe',
     password: bcrypt.hashSync('Test1234', 10),
     role: 'ADMIN' as Role,
+    customerId: 'cus_P1Ul1b3ogF61AQ',
     addresses: {
       createMany: {
         data: [
@@ -2095,6 +2098,7 @@ export const users: MockUser[] = [
     lastName: 'Fernandez',
     password: bcrypt.hashSync('Test1234', 10),
     role: 'USER' as Role,
+    customerId: 'cus_P1Ul5ST87rf3p8',
     addresses: {
       create: {
         firstName: 'John',

@@ -115,6 +115,31 @@ async function main() {
         };
       }
 
+      return prisma.user.create({
+        data,
+        include: {
+          addresses: {
+            select: {
+              id: true
+            }
+          }
+        }
+      });
+    }
+  );
+
+  const usersCreated = await Promise.all(allUsers);
+
+  const createOrdersAndRatings = usersToCreate.map(
+    async ({ orders, ratings, ...user }: MockUser) => {
+      const data:
+        | (Prisma.Without<Prisma.UserUpdateInput, Prisma.UserUncheckedUpdateInput> &
+            Prisma.UserUncheckedUpdateInput)
+        | (Prisma.Without<Prisma.UserUncheckedUpdateInput, Prisma.UserUpdateInput> &
+            Prisma.UserUpdateInput) = {};
+
+      const userCreated = usersCreated.find((userCreated) => userCreated.email === user.email);
+      
       if (orders) {
         const booksOrdered = await prisma.book.findMany({
           where: {
@@ -137,6 +162,7 @@ async function main() {
                 })
               }
             },
+            addressId: userCreated.addresses[0].id,
             status: 'COMPLETED'
           }
         };
@@ -155,12 +181,14 @@ async function main() {
         }
       }
 
-      return prisma.user.create({
+      return prisma.user.update({
+        where: { id: userCreated.id },
         data
       });
     }
   );
-  await Promise.all(allUsers);
+
+  await Promise.all(createOrdersAndRatings);
 }
 
 main()

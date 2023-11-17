@@ -1,7 +1,8 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, InternalServerErrorException } from '@nestjs/common';
 import { StripeService } from '../stripe/stripe.service';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class WebhookService {
@@ -13,8 +14,6 @@ export class WebhookService {
 
   async handleWebhooks(signature: string, rawBody: any) {
     const endpointSecret = this.configService.get('STRIPE_WEBHOOK_SECRET');
-    console.log({ signature });
-    console.log({ rawBody });
     let event;
 
     try {
@@ -27,18 +26,9 @@ export class WebhookService {
       throw new BadRequestException(`Webhook error: ${error.message}`);
     }
 
-    console.log({ event });
-
     switch (event.type) {
       case 'payment_intent.succeeded':
-        console.log('payment_intent.succeeded');
         this.paymentIntentSucceeded(event);
-        break;
-      case 'payment_intent.payment_failed':
-        console.log('payment_intent.payment_failed');
-        break;
-      case 'payment_intent.canceled':
-        console.log('payment_intent.canceled');
         break;
       default:
         console.log(`Unhandled event type ${event.type}`);
@@ -46,12 +36,32 @@ export class WebhookService {
     }
   }
 
-  paymentIntentSucceeded(event: any) {
-    console.log({
-      amount: event.data.object.amount,
-      metadata: event.data.object.metadata
-    });
+  async paymentIntentSucceeded(event: any) {
+    const { addressId, userId } = event.data.object.metadata;
+
+    try {
+      const order = await this.prismaService.order.create({
+        data: {
+          addressId,
+          userId,
+          status: 'COMPLETED'
+        }
+      });
+
+      return order;
+    } catch (error) {
+      this.handleDBError(error);
+    }
   }
 
-  paymentIntentFailed(event: any) {}
+  handleDBError(error: any) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === 'P2002') {
+        throw new BadRequestException('There is already an account with this email');
+      }
+    }
+
+    console.log(error);
+    throw new InternalServerErrorException('Check server logs for more info');
+  }
 }
