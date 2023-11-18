@@ -143,10 +143,11 @@ model CartBook {
 }
 
 model Order {
-  id        Int         @id @default(autoincrement())
-  status    OrderStatus @default(PENDING)
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
+  id         Int         @id @default(autoincrement())
+  status     OrderStatus @default(PENDING)
+  receiptUrl String?
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
 
   userId    Int
   user      User        @relation(fields: [userId], references: [id])

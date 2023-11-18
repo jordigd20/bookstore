@@ -37,6 +37,7 @@ export class WebhookService {
   }
 
   async paymentIntentSucceeded(event: any) {
+    const { receipt_url } = event.data.object.charges.data[0];
     const { addressId, userId } = event.data.object.metadata;
 
     try {
@@ -44,7 +45,8 @@ export class WebhookService {
         data: {
           addressId,
           userId,
-          status: 'COMPLETED'
+          status: 'COMPLETED',
+          receiptUrl: receipt_url
         }
       });
 
