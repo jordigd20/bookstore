@@ -9,7 +9,7 @@ export class WebhookService {
   constructor(
     private readonly configService: ConfigService,
     private readonly stripeService: StripeService,
-    private readonly prismaService: PrismaService
+    private readonly prisma: PrismaService
   ) {}
 
   async handleWebhooks(signature: string, rawBody: any) {
@@ -38,17 +38,53 @@ export class WebhookService {
 
   async paymentIntentSucceeded(event: any) {
     const { receipt_url } = event.data.object.charges.data[0];
-    const { addressId, userId } = event.data.object.metadata;
+    const { addressId, userId, cartId, orderId } = event.data.object.metadata;
+
+    const cartItems = await this.prisma.cartBook.findMany({
+      where: {
+        cartId
+      },
+      include: {
+        book: true
+      }
+    });
+
+    if (cartItems.length === 0) {
+      throw new BadRequestException('The cart provided was not found or is empty');
+    }
+
+    const total = cartItems.reduce((acc, curr) => {
+      return acc + curr.quantity * Number(curr.book.currentPrice);
+    }, 0);
 
     try {
-      const order = await this.prismaService.order.create({
+      const updateOrder = this.prisma.order.update({
+        where: {
+          id: orderId
+        },
         data: {
-          addressId,
-          userId,
           status: 'COMPLETED',
-          receiptUrl: receipt_url
+          receiptUrl: receipt_url,
+          total,
+          books: {
+            create: cartItems.map((item) => {
+              return {
+                bookId: item.bookId,
+                quantity: item.quantity,
+                price: item.book.currentPrice
+              };
+            })
+          }
         }
       });
+
+      const removeCartItems = this.prisma.cartBook.deleteMany({
+        where: {
+          cartId
+        }
+      });
+
+      const [order, _] = await this.prisma.$transaction([updateOrder, removeCartItems]);
 
       return order;
     } catch (error) {

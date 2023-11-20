@@ -5,9 +5,26 @@ import { StripeService } from '../stripe/stripe.service';
 import { ConfigService } from '@nestjs/config';
 import Stripe from 'stripe';
 import { BadRequestException } from '@nestjs/common';
+import { CreateBookDto } from '../books/dto/create-book.dto';
 
 describe('WebhookService', () => {
   let service: WebhookService;
+
+  const mockBook: CreateBookDto = {
+    ISBN: '1234567890123',
+    title: 'title of the book',
+    description: 'description',
+    author: 'author',
+    publisher: 'publisher',
+    publishedDate: new Date(),
+    pageCount: 1,
+    imageLink: 'imageLink',
+    language: 'ES',
+    currentPrice: 9.99,
+    originalPrice: 9.99,
+    discount: 0,
+    categories: ['fiction-literature']
+  };
 
   const stripe = new Stripe(process.env.STRIPE_API_KEY, {
     apiVersion: '2023-08-16'
@@ -27,18 +44,45 @@ describe('WebhookService', () => {
 
   const mockPrismaService = {
     order: {
-      create: jest.fn().mockImplementation((data: any) => {
+      update: jest.fn().mockImplementation((data: any) => {
+        const { id } = data.where;
+        const { status, receiptUrl, total } = data.data;
+
         return {
-          id: new Date().getTime(),
-          status: 'COMPLETED',
+          id,
+          status,
+          receiptUrl,
+          total,
           createdAt: new Date(),
           updatedAt: new Date(),
-          userId: data.data.userId,
-          addressId: data.data.addressId,
-          receiptUrl: data.data.receiptUrl
+          userId: new Date().getTime(),
+          addressId: new Date().getTime()
         };
       })
-    }
+    },
+    cartBook: {
+      findMany: jest.fn().mockImplementation((data: any) => {
+        return [
+          {
+            book: {
+              ...mockBook,
+              id: new Date().getTime()
+            },
+            quantity: 1,
+            bookId: new Date().getTime(),
+            cartId: data.where.cartId,
+            updatedAt: new Date(),
+            createdAt: new Date()
+          }
+        ];
+      }),
+      deleteMany: jest.fn().mockImplementation((data: any) => {
+        return {
+          count: 1
+        };
+      })
+    },
+    $transaction: jest.fn().mockImplementation((args) => args)
   };
 
   const paymentIntentSucceededEvent = {
@@ -57,8 +101,8 @@ describe('WebhookService', () => {
           ]
         },
         metadata: {
-          userId: 1,
-          addressId: 2
+          orderId: 1,
+          cartId: 3
         }
       }
     }
@@ -160,19 +204,36 @@ describe('WebhookService', () => {
         id: expect.any(Number),
         status: 'COMPLETED',
         receiptUrl: 'https://pay.stripe.com/receipts/...',
+        total: 9.99,
         createdAt: expect.any(Date),
         updatedAt: expect.any(Date),
-        userId: 1,
-        addressId: 2
+        userId: expect.any(Number),
+        addressId: expect.any(Number),
       });
-      expect(mockPrismaService.order.create).toHaveBeenCalledWith({
-        data: {
-          addressId: 2,
-          userId: 1,
-          status: 'COMPLETED',
-          receiptUrl: 'https://pay.stripe.com/receipts/...'
-        }
+      expect(mockPrismaService.cartBook.findMany).toHaveBeenCalled();
+      expect(mockPrismaService.order.update).toHaveBeenCalled();
+      expect(mockPrismaService.cartBook.deleteMany).toHaveBeenCalled();
+    });
+
+    it('should throw an error if the cart is empty', async () => {
+      const rawBody = JSON.stringify(paymentIntentSucceededEvent, null, 2);
+      const header = stripe.webhooks.generateTestHeaderString({
+        payload: rawBody,
+        secret: process.env.STRIPE_WEBHOOK_SECRET
       });
+
+      const event = await stripe.webhooks.constructEventAsync(
+        rawBody,
+        header,
+        process.env.STRIPE_WEBHOOK_SECRET
+      );
+
+      mockPrismaService.cartBook.findMany = jest.fn().mockImplementation((data: any) => {
+        return [];
+      });
+
+      await expect(service.paymentIntentSucceeded(event)).rejects.toThrowError(BadRequestException);
+      expect(mockPrismaService.cartBook.findMany).toHaveBeenCalled();
     });
   });
 });

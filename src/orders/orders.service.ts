@@ -1,4 +1,9 @@
-import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  InternalServerErrorException
+} from '@nestjs/common';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { StripeService } from '../stripe/stripe.service';
@@ -6,6 +11,7 @@ import { CheckoutDto } from './dto/checkout.dto';
 import { AuthUser } from '../auth/interfaces/auth-user.interface';
 import { ValidRoles } from 'src/auth/interfaces/valid-roles.interface';
 import { PrismaService } from '../prisma/prisma.service';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class OrdersService {
@@ -43,11 +49,20 @@ export class OrdersService {
       throw new BadRequestException('The user provided was not found');
     }
 
+    const order = await this.prisma.order.create({
+      data: {
+        addressId,
+        userId,
+        status: 'PENDING',
+        total: 0,
+      }
+    });
+
     const response = await this.stripeService.stripe.checkout.sessions.create({
       currency: 'EUR',
       mode: 'payment',
       cancel_url: `${process.env.CLIENT_URL}/checkout`,
-      success_url: `${process.env.CLIENT_URL}/success-checkout`,
+      success_url: `${process.env.CLIENT_URL}/success-checkout/${order.id}`,
       line_items: cartItems.map((item) => {
         return {
           price_data: {
@@ -66,7 +81,9 @@ export class OrdersService {
       payment_intent_data: {
         metadata: {
           userId: userId,
-          addressId: addressId
+          addressId: addressId,
+          cartId: authUser.cart.id,
+          orderId: order.id
         }
       }
     });
@@ -78,16 +95,88 @@ export class OrdersService {
     };
   }
 
-  create(createOrderDto: CreateOrderDto) {
-    return 'This action adds a new order';
+  async create(createOrderDto: CreateOrderDto) {
+    const { addressId, userId, cartId, receiptUrl } = createOrderDto;
+
+    const cartItems = await this.prisma.cartBook.findMany({
+      where: {
+        cartId
+      },
+      include: {
+        book: true
+      }
+    });
+
+    if (cartItems.length === 0) {
+      throw new BadRequestException('The cart provided was not found or is empty');
+    }
+
+    const total = cartItems.reduce((acc, curr) => {
+      return acc + curr.quantity * Number(curr.book.currentPrice);
+    }, 0);
+
+
+    try {
+      const createOrder = this.prisma.order.create({
+        data: {
+          addressId,
+          userId,
+          status: 'COMPLETED',
+          receiptUrl: receiptUrl,
+          total,
+          books: {
+            create: cartItems.map((item) => {
+              return {
+                bookId: item.bookId,
+                quantity: item.quantity,
+                price: item.book.currentPrice
+              };
+            })
+          }
+        }
+      });
+
+      const removeCartItems = this.prisma.cartBook.deleteMany({
+        where: {
+          cartId
+        }
+      });
+
+      const [order, _] = await this.prisma.$transaction([createOrder, removeCartItems]);
+
+      return order;
+    } catch (error) {
+      this.handleDBError(error);
+    }
   }
 
   findAll() {
     return `This action returns all orders`;
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} order`;
+  async findOne(id: number, authUser: AuthUser) {
+    const order = await this.prisma.order.findUnique({
+      where: {
+        id
+      },
+      include: {
+        books: {
+          include: {
+            book: true
+          }
+        }
+      }
+    });
+
+    if (!order) {
+      throw new BadRequestException('The order provided was not found');
+    }
+
+    if (authUser.role !== ValidRoles.admin && order.userId !== authUser.id) {
+      throw new ForbiddenException('You can only see your own orders');
+    }
+
+    return order;
   }
 
   update(id: number, updateOrderDto: UpdateOrderDto) {
@@ -96,5 +185,16 @@ export class OrdersService {
 
   remove(id: number) {
     return `This action removes a #${id} order`;
+  }
+
+  handleDBError(error: any) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === 'P2002') {
+        throw new BadRequestException('There is already an account with this email');
+      }
+    }
+
+    console.log(error);
+    throw new InternalServerErrorException('Check server logs for more info');
   }
 }

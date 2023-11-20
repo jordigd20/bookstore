@@ -14,6 +14,7 @@ import {
 import { AuthUser } from '../auth/interfaces/auth-user.interface';
 import { GetUser } from '../auth/decorators/get-user.decorator';
 import { CheckoutEntity } from './entities/checkout.entity';
+import { ValidRoles } from '../auth/interfaces/valid-roles.interface';
 
 @ApiTags('orders')
 @Auth()
@@ -34,6 +35,7 @@ export class OrdersController {
     return this.ordersService.createStripeCheckoutSession(userId, checkoutDto, authUser);
   }
 
+  @Auth('jwt', ValidRoles.admin)
   @Post()
   create(@Body() createOrderDto: CreateOrderDto) {
     return this.ordersService.create(createOrderDto);
@@ -45,8 +47,8 @@ export class OrdersController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.ordersService.findOne(+id);
+  findOne(@Param('id', ParseIntPipe) id: number, @GetUser() authUser: AuthUser) {
+    return this.ordersService.findOne(id, authUser);
   }
 
   @Patch(':id')

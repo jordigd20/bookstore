@@ -6,12 +6,12 @@ const prisma = new PrismaClient();
 async function main() {
   // await prisma.wishlistBook.deleteMany();
   // await prisma.wishlist.deleteMany();
+  // await prisma.orderBook.deleteMany();
+  // await prisma.order.deleteMany();
   // await prisma.address.deleteMany();
   // await prisma.ratingUserBook.deleteMany();
   // await prisma.cartBook.deleteMany();
   // await prisma.cart.deleteMany();
-  // await prisma.orderBook.deleteMany();
-  // await prisma.order.deleteMany();
   // await prisma.book.deleteMany();
   // await prisma.user.deleteMany();
   // await prisma.category.deleteMany();
@@ -139,7 +139,7 @@ async function main() {
             Prisma.UserUpdateInput) = {};
 
       const userCreated = usersCreated.find((userCreated) => userCreated.email === user.email);
-      
+
       if (orders) {
         const booksOrdered = await prisma.book.findMany({
           where: {
@@ -163,7 +163,10 @@ async function main() {
               }
             },
             addressId: userCreated.addresses[0].id,
-            status: 'COMPLETED'
+            status: 'COMPLETED',
+            total: booksOrdered.reduce((acc, curr) => {
+              return acc + Number(curr.currentPrice);
+            }, 0)
           }
         };
 

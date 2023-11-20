@@ -25,13 +25,14 @@ describe('WebhookController', () => {
       switch (event.type) {
         case 'payment_intent.succeeded':
           return {
-            id: new Date().getTime(),
+            id: 1,
             status: 'COMPLETED',
             createdAt: new Date(),
             updatedAt: new Date(),
             receiptUrl: event.data.object.charges.data[0].receipt_url,
-            userId: event.data.object.metadata.userId,
-            addressId: event.data.object.metadata.addressId
+            total: 9.99,
+            userId: new Date().getTime(),
+            addressId: new Date().getTime()
           };
         default:
           console.log(`Unhandled event type ${event.type}`);
@@ -56,8 +57,8 @@ describe('WebhookController', () => {
           ]
         },
         metadata: {
-          userId: 1,
-          addressId: 2
+          orderId: 1,
+          cartId: 2
         }
       }
     }
@@ -90,13 +91,14 @@ describe('WebhookController', () => {
     });
 
     expect(controller.webhook(header, { rawBody } as any)).toEqual({
-      id: expect.any(Number),
+      id: 1,
       status: 'COMPLETED',
       receiptUrl: 'https://pay.stripe.com/receipts/...',
       createdAt: expect.any(Date),
       updatedAt: expect.any(Date),
-      userId: 1,
-      addressId: 2
+      total: 9.99,
+      userId: expect.any(Number),
+      addressId: expect.any(Number)
     });
     expect(webhookServiceMock.handleWebhooks).toHaveBeenCalledWith(header, rawBody);
   });

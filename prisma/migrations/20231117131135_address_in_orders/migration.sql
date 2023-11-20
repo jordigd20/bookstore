@@ -7,7 +7,7 @@
 
 */
 -- AlterTable
-ALTER TABLE "Order" ADD COLUMN     "addressId" INTEGER NOT NULL, ADD COLUMN "receiptUrl" TEXT;
+ALTER TABLE "Order" ADD COLUMN     "addressId" INTEGER NOT NULL, ADD COLUMN "receiptUrl" TEXT, ADD COLUMN "total" DECIMAL(12,2) NOT NULL;
 
 -- AlterTable
 ALTER TABLE "User" ADD COLUMN     "customerId" TEXT NOT NULL;
