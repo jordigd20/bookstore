@@ -12,6 +12,7 @@ import { AuthUser } from '../auth/interfaces/auth-user.interface';
 import { ValidRoles } from 'src/auth/interfaces/valid-roles.interface';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
+import { FindOrdersDto } from './dto/find-orders.dto';
 
 @Injectable()
 export class OrdersService {
@@ -54,7 +55,7 @@ export class OrdersService {
         addressId,
         userId,
         status: 'PENDING',
-        total: 0,
+        total: 0
       }
     });
 
@@ -115,7 +116,6 @@ export class OrdersService {
       return acc + curr.quantity * Number(curr.book.currentPrice);
     }, 0);
 
-
     try {
       const createOrder = this.prisma.order.create({
         data: {
@@ -150,8 +150,101 @@ export class OrdersService {
     }
   }
 
-  findAll() {
-    return `This action returns all orders`;
+  async findAllByUserId(userId: number, findOrdersDto: FindOrdersDto, authUser: AuthUser) {
+    const { month, year } = findOrdersDto;
+
+    if (authUser.role !== ValidRoles.admin && authUser.id !== userId) {
+      throw new ForbiddenException('You can only see your own orders');
+    }
+
+    try {
+      const orders = await this.prisma.order.findMany({
+        where: {
+          userId,
+          createdAt: {
+            gte: new Date(year, month - 1, 1),
+            lt: new Date(year, month, 1)
+          }
+        },
+        include: {
+          books: {
+            include: {
+              book: true
+            }
+          }
+        }
+      });
+
+      return orders;
+    } catch (error) {
+      this.handleDBError(error);
+    }
+  }
+
+  async findLastOrdersByUserId(userId: number, authUser: AuthUser) {
+    if (authUser.role !== ValidRoles.admin && authUser.id !== userId) {
+      throw new ForbiddenException('You can only see your own orders');
+    }
+
+    try {
+      // Get the years and months the user has orders
+      const orders = await this.prisma.order.findMany({
+        where: {
+          userId
+        },
+        orderBy: {
+          createdAt: 'desc'
+        },
+        select: {
+          id: true,
+          createdAt: true
+        }
+      });
+
+      if (orders.length === 0) {
+        return {
+          ordersByDate: {},
+          orders: []
+        };
+      }
+
+      const ordersByDate = {};
+
+      for (const order of orders) {
+        const year = order.createdAt.getFullYear();
+        const month = order.createdAt.getMonth() + 1;
+
+        if (ordersByDate[year]) {
+          ordersByDate[year].add(month);
+        } else {
+          ordersByDate[year] = new Set<number>([month]);
+        }
+      }
+
+      // Replace the sets with arrays
+      for (const year in ordersByDate) {
+        ordersByDate[year] = [...ordersByDate[year]];
+      }
+
+      const lastYear = Math.max(...Object.keys(ordersByDate).map((year) => Number(year)));
+      const lastMonth = Math.max(...ordersByDate[lastYear]);
+
+      const lastOrders = await this.findAllByUserId(
+        userId,
+        {
+          month: lastMonth,
+          year: lastYear
+        },
+        authUser
+      );
+
+      return {
+        ordersByDate,
+        orders: lastOrders
+      };
+    } catch (error) {
+      this.handleDBError(error);
+    }
   }
 
   async findOne(id: number, authUser: AuthUser) {

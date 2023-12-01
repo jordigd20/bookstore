@@ -21,7 +21,6 @@ async function bootstrap() {
     .setTitle('Bookstore API')
     .setDescription('API Rest for an ecommerce about books')
     .setVersion('0.1')
-    .addTag('bookstore')
     .addBearerAuth()
     .build();
 

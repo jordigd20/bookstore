@@ -1,4 +1,14 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  ParseIntPipe,
+  Query
+} from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
@@ -9,12 +19,16 @@ import {
   ApiBearerAuth,
   ApiCreatedResponse,
   ApiForbiddenResponse,
+  ApiOkResponse,
   ApiTags
 } from '@nestjs/swagger';
 import { AuthUser } from '../auth/interfaces/auth-user.interface';
 import { GetUser } from '../auth/decorators/get-user.decorator';
 import { CheckoutEntity } from './entities/checkout.entity';
 import { ValidRoles } from '../auth/interfaces/valid-roles.interface';
+import { FindOrdersDto } from './dto/find-orders.dto';
+import { OrderEntity } from './entities/order.entity';
+import { LastOrdersEntity } from './entities/last-orders.entity';
 
 @ApiTags('orders')
 @Auth()
@@ -23,10 +37,10 @@ import { ValidRoles } from '../auth/interfaces/valid-roles.interface';
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
-  @Post('/checkout-session/:userId')
   @ApiCreatedResponse({ type: CheckoutEntity })
   @ApiForbiddenResponse({ description: 'Forbidden' })
   @ApiBadRequestResponse({ description: 'Invalid data provided' })
+  @Post('/checkout-session/:userId')
   stripeCheckoutSession(
     @Param('userId', ParseIntPipe) userId: number,
     @Body() checkoutDto: CheckoutDto,
@@ -35,15 +49,36 @@ export class OrdersController {
     return this.ordersService.createStripeCheckoutSession(userId, checkoutDto, authUser);
   }
 
+  @ApiCreatedResponse({ type: OrderEntity })
+  @ApiForbiddenResponse({ description: 'Forbidden' })
+  @ApiBadRequestResponse({ description: 'Invalid data provided' })
   @Auth('jwt', ValidRoles.admin)
   @Post()
   create(@Body() createOrderDto: CreateOrderDto) {
     return this.ordersService.create(createOrderDto);
   }
 
-  @Get()
-  findAll() {
-    return this.ordersService.findAll();
+  @ApiOkResponse({ type: OrderEntity, isArray: true })
+  @ApiForbiddenResponse({ description: 'Forbidden' })
+  @ApiBadRequestResponse({ description: 'Invalid data provided' })
+  @Get('/user/:userId')
+  findAllByUserId(
+    @Param('userId', ParseIntPipe) userId: number,
+    @Query() findOrdersDto: FindOrdersDto,
+    @GetUser() authUser: AuthUser
+  ) {
+    return this.ordersService.findAllByUserId(userId, findOrdersDto, authUser);
+  }
+
+  @ApiOkResponse({ type: LastOrdersEntity, isArray: true })
+  @ApiForbiddenResponse({ description: 'Forbidden' })
+  @ApiBadRequestResponse({ description: 'Invalid data provided' })
+  @Get('/last-orders/:userId')
+  findLastOrdersByUserId(
+    @Param('userId', ParseIntPipe) userId: number,
+    @GetUser() authUser: AuthUser
+  ) {
+    return this.ordersService.findLastOrdersByUserId(userId, authUser);
   }
 
   @Get(':id')
