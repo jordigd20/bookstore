@@ -81,18 +81,29 @@ export class OrdersController {
     return this.ordersService.findLastOrdersByUserId(userId, authUser);
   }
 
+  @ApiOkResponse({ type: OrderEntity })
+  @ApiForbiddenResponse({ description: 'Forbidden' })
+  @ApiBadRequestResponse({ description: 'Invalid data provided' })
   @Get(':id')
   findOne(@Param('id', ParseIntPipe) id: number, @GetUser() authUser: AuthUser) {
     return this.ordersService.findOne(id, authUser);
   }
 
+  @ApiOkResponse({ type: OrderEntity })
+  @ApiForbiddenResponse({ description: 'Forbidden' })
+  @ApiBadRequestResponse({ description: 'Invalid data provided' })
+  @Auth('jwt', ValidRoles.admin)
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateOrderDto: UpdateOrderDto) {
-    return this.ordersService.update(+id, updateOrderDto);
+  update(@Param('id', ParseIntPipe) id: number, @Body() updateOrderDto: UpdateOrderDto) {
+    return this.ordersService.update(id, updateOrderDto);
   }
 
+  @ApiOkResponse({ description: 'Order deleted successfully' })
+  @ApiForbiddenResponse({ description: 'Forbidden' })
+  @ApiBadRequestResponse({ description: 'Invalid data provided' })
+  @Auth('jwt', ValidRoles.admin)
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.ordersService.remove(+id);
+  remove(@Param('id', ParseIntPipe) id: number) {
+    return this.ordersService.remove(id);
   }
 }

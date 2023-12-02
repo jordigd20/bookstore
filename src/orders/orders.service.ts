@@ -272,18 +272,85 @@ export class OrdersService {
     return order;
   }
 
-  update(id: number, updateOrderDto: UpdateOrderDto) {
-    return `This action updates a #${id} order`;
+  async update(id: number, updateOrderDto: UpdateOrderDto) {
+    const { receiptUrl, books } = updateOrderDto;
+    const data = {};
+
+    try {
+      if (receiptUrl) {
+        data['receiptUrl'] = receiptUrl;
+      }
+
+      if (books) {
+        data['books'] = {
+          deleteMany: {
+            orderId: id
+          },
+          createMany: {
+            data: books.map((item) => {
+              return {
+                bookId: item.bookId,
+                quantity: item.quantity,
+                price: item.price
+              };
+            })
+          }
+        };
+      }
+
+      const order = await this.prisma.order.update({
+        where: {
+          id
+        },
+        data,
+        include: {
+          books: {
+            include: {
+              book: true
+            }
+          }
+        }
+      });
+
+      return order;
+    } catch (error) {
+      this.handleDBError(error);
+    }
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} order`;
+  async remove(id: number) {
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        await tx.orderBook.deleteMany({
+          where: {
+            orderId: id
+          }
+        });
+
+        await tx.order.delete({
+          where: {
+            id
+          }
+        });
+      });
+
+      return {
+        message: 'Order deleted successfully',
+        statusCode: 200
+      };
+    } catch (error) {
+      this.handleDBError(error);
+    }
   }
 
   handleDBError(error: any) {
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
       if (error.code === 'P2002') {
         throw new BadRequestException('There is already an account with this email');
+      }
+
+      if (error.code === 'P2025') {
+        throw new BadRequestException('Invalid data provided');
       }
     }
 
