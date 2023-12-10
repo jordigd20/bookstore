@@ -1,4 +1,4 @@
-import { Controller, Headers, Post, RawBodyRequest, Req } from '@nestjs/common';
+import { Controller, Get, Headers, Post, RawBodyRequest, Req } from '@nestjs/common';
 import { WebhookService } from './webhook.service';
 import { Request } from 'express';
 import { ApiBadRequestResponse, ApiCreatedResponse } from '@nestjs/swagger';
@@ -13,5 +13,10 @@ export class WebhookController {
   webhook(@Headers('stripe-signature') signature: string, @Req() req: RawBodyRequest<Request>) {
     const rawBody = req.rawBody;
     return this.webhookService.handleWebhooks(signature, rawBody);
+  }
+
+  @Get('test')
+  testRoute() {
+    return 'Test route from books controller';
   }
 }
