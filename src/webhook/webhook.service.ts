@@ -38,11 +38,11 @@ export class WebhookService {
 
   async paymentIntentSucceeded(event: any) {
     const { receipt_url } = event.data.object.charges.data[0];
-    const { addressId, userId, cartId, orderId } = event.data.object.metadata;
+    const { wishlistId, cartId, orderId } = event.data.object.metadata;
 
     const cartItems = await this.prisma.cartBook.findMany({
       where: {
-        cartId
+        cartId: Number(cartId)
       },
       include: {
         book: true
@@ -60,7 +60,7 @@ export class WebhookService {
     try {
       const updateOrder = this.prisma.order.update({
         where: {
-          id: orderId
+          id: Number(orderId)
         },
         data: {
           status: 'COMPLETED',
@@ -84,7 +84,22 @@ export class WebhookService {
         }
       });
 
-      const [order, _] = await this.prisma.$transaction([updateOrder, removeCartItems]);
+      const removeWishlistedItems = this.prisma.wishlistBook.deleteMany({
+        where: {
+          wishlistId: Number(wishlistId),
+          AND: {
+            bookId: {
+              in: cartItems.map((item) => item.bookId)
+            }
+          }
+        }
+      });
+
+      const [order, removeCart, removeWishlist] = await this.prisma.$transaction([
+        updateOrder,
+        removeCartItems,
+        removeWishlistedItems
+      ]);
 
       return order;
     } catch (error) {

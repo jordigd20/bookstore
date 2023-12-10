@@ -37,6 +37,13 @@ export class OrdersService {
     const findUser = this.prisma.user.findUnique({
       where: {
         id: userId
+      },
+      include: {
+        wishlist: {
+          select: {
+            id: true
+          }
+        }
       }
     });
 
@@ -84,6 +91,7 @@ export class OrdersService {
           userId: userId,
           addressId: addressId,
           cartId: authUser.cart.id,
+          wishlistId: user.wishlist.id,
           orderId: order.id
         }
       }
@@ -97,16 +105,33 @@ export class OrdersService {
   }
 
   async create(createOrderDto: CreateOrderDto) {
-    const { addressId, userId, cartId, receiptUrl } = createOrderDto;
+    const { addressId, userId, receiptUrl } = createOrderDto;
 
-    const cartItems = await this.prisma.cartBook.findMany({
+    const user = await this.prisma.user.findUnique({
       where: {
-        cartId
+        id: userId
       },
       include: {
-        book: true
+        cart: {
+          include: {
+            books: {
+              include: {
+                book: true
+              }
+            }
+          }
+        },
+        wishlist: {
+          select: {
+            id: true
+          }
+        }
       }
     });
+
+    const cartId = user.cart.id;
+    const wishlistId = user.wishlist.id;
+    const cartItems = user.cart.books;
 
     if (cartItems.length === 0) {
       throw new BadRequestException('The cart provided was not found or is empty');
@@ -142,7 +167,22 @@ export class OrdersService {
         }
       });
 
-      const [order, _] = await this.prisma.$transaction([createOrder, removeCartItems]);
+      const removeWishlistedItems = this.prisma.wishlistBook.deleteMany({
+        where: {
+          wishlistId,
+          AND: {
+            bookId: {
+              in: cartItems.map((item) => item.bookId)
+            }
+          }
+        }
+      });
+
+      const [order, removeCart, removeWishlist] = await this.prisma.$transaction([
+        createOrder,
+        removeCartItems,
+        removeWishlistedItems
+      ]);
 
       return order;
     } catch (error) {

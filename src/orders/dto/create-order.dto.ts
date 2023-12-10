@@ -5,9 +5,6 @@ export class CreateOrderDto {
   userId: number;
 
   @IsNumber()
-  cartId: number;
-
-  @IsNumber()
   addressId: number;
 
   @IsOptional()
