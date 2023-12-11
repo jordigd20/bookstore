@@ -87,7 +87,7 @@ export class WebhookService {
 
       const removeCartItems = this.prisma.cartBook.deleteMany({
         where: {
-          cartId
+          cartId: Number(cartId),
         }
       });
 
