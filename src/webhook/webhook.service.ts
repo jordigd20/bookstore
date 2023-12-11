@@ -40,6 +40,9 @@ export class WebhookService {
     const { receipt_url } = event.data.object.charges.data[0];
     const { wishlistId, cartId, orderId } = event.data.object.metadata;
 
+
+    console.log(wishlistId, cartId, orderId);
+
     const cartItems = await this.prisma.cartBook.findMany({
       where: {
         cartId: Number(cartId)
