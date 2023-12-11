@@ -48,6 +48,8 @@ export class WebhookService {
         book: true
       }
     });
+    
+    console.log(cartItems);
 
     if (cartItems.length === 0) {
       throw new BadRequestException('The cart provided was not found or is empty');
@@ -57,6 +59,8 @@ export class WebhookService {
       return acc + curr.quantity * Number(curr.book.currentPrice);
     }, 0);
 
+    console.log(total);
+    
     try {
       const updateOrder = this.prisma.order.update({
         where: {
@@ -100,6 +104,8 @@ export class WebhookService {
         removeCartItems,
         removeWishlistedItems
       ]);
+
+      console.log(order);
 
       return order;
     } catch (error) {

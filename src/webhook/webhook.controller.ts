@@ -14,9 +14,4 @@ export class WebhookController {
     const rawBody = req.rawBody;
     return this.webhookService.handleWebhooks(signature, rawBody);
   }
-
-  @Get('test')
-  testRoute() {
-    return 'Test route from books controller';
-  }
 }
