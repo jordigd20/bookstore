@@ -40,9 +40,6 @@ export class WebhookService {
     const { receipt_url } = event.data.object.charges.data[0];
     const { wishlistId, cartId, orderId } = event.data.object.metadata;
 
-
-    console.log(wishlistId, cartId, orderId);
-
     const cartItems = await this.prisma.cartBook.findMany({
       where: {
         cartId: Number(cartId)
@@ -52,7 +49,6 @@ export class WebhookService {
       }
     });
     
-    console.log(cartItems);
 
     if (cartItems.length === 0) {
       throw new BadRequestException('The cart provided was not found or is empty');
@@ -62,7 +58,6 @@ export class WebhookService {
       return acc + curr.quantity * Number(curr.book.currentPrice);
     }, 0);
 
-    console.log(total);
     
     try {
       const updateOrder = this.prisma.order.update({
@@ -107,8 +102,6 @@ export class WebhookService {
         removeCartItems,
         removeWishlistedItems
       ]);
-
-      console.log(order);
 
       return order;
     } catch (error) {

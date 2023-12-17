@@ -1661,32 +1661,6 @@ export const books = [
     }
   },
   {
-    title: '1984',
-    ISBN: '9780547249643',
-    slug: '1984',
-    author: 'George Orwell',
-    publisher: 'HarperCollins',
-    publishedDate: new Date(2013, 8, 3),
-    description:
-      '1984 is a dystopian novel by George Orwell that examines the dangers of totalitarianism and government overreach. It has had a profound influence on the world of literature and politics.',
-    pageCount: 328,
-    imageLink:
-      'https://res.cloudinary.com/dtozxzg7o/image/upload/v1697215839/books/r5gud83t7jogikdxpc2l.webp',
-    language: 'EN',
-    currentPrice: 14.99,
-    originalPrice: 14.99,
-    discount: 0,
-    isBestseller: false,
-    createdAt: new Date(),
-    categories: {
-      connect: [
-        {
-          slug: 'fiction-literature'
-        }
-      ]
-    }
-  },
-  {
     title: 'The Great Gatsby',
     ISBN: '9780743273565',
     slug: 'the-great-gatsby',

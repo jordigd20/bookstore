@@ -58,7 +58,10 @@ describe('WebhookController', () => {
         },
         metadata: {
           orderId: 1,
-          cartId: 2
+          cartId: 2,
+          userId: 3,
+          wishlistId: 4,
+          addressId: 5
         }
       }
     }

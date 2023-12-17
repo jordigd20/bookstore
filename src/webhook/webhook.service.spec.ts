@@ -82,6 +82,13 @@ describe('WebhookService', () => {
         };
       })
     },
+    wishlistBook: {
+      deleteMany: jest.fn().mockImplementation((data: any) => {
+        return {
+          count: 1
+        };
+      })
+    },
     $transaction: jest.fn().mockImplementation((args) => args)
   };
 
@@ -102,7 +109,10 @@ describe('WebhookService', () => {
         },
         metadata: {
           orderId: 1,
-          cartId: 3
+          userId: 2,
+          cartId: 3,
+          wishlistId: 4,
+          addressId: 5
         }
       }
     }
@@ -208,7 +218,7 @@ describe('WebhookService', () => {
         createdAt: expect.any(Date),
         updatedAt: expect.any(Date),
         userId: expect.any(Number),
-        addressId: expect.any(Number),
+        addressId: expect.any(Number)
       });
       expect(mockPrismaService.cartBook.findMany).toHaveBeenCalled();
       expect(mockPrismaService.order.update).toHaveBeenCalled();
