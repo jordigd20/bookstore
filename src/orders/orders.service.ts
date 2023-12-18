@@ -9,10 +9,10 @@ import { UpdateOrderDto } from './dto/update-order.dto';
 import { StripeService } from '../stripe/stripe.service';
 import { CheckoutDto } from './dto/checkout.dto';
 import { AuthUser } from '../auth/interfaces/auth-user.interface';
-import { ValidRoles } from 'src/auth/interfaces/valid-roles.interface';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 import { FindOrdersDto } from './dto/find-orders.dto';
+import { ValidRoles } from '../auth/interfaces/valid-roles.interface';
 
 @Injectable()
 export class OrdersService {
