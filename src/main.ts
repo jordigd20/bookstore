@@ -19,7 +19,7 @@ async function bootstrap() {
 
   const config = new DocumentBuilder()
     .setTitle('Bookstore API')
-    .setDescription('API Rest for an ecommerce about books')
+    .setDescription('API Rest for a bookstore e-commerce')
     .setVersion('0.1')
     .addBearerAuth()
     .build();
