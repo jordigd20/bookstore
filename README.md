@@ -24,6 +24,10 @@ You can take a look at the frontend in the [bookstore-angular](https://github.co
 - **API Documentation**: [Swagger](https://swagger.io/)
 - **Production deployment**: [Railway](https://railway.app/)
 
+## System architecture
+
+<img src="https://res.cloudinary.com/demz9lbb3/image/upload/v1721067758/bookstore/drmhxigw5fekilp2arl5.webp" alt="Bookstore system architecture"/>
+
 ## Installation
 
 ```bash
